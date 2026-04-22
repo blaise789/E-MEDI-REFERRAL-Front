@@ -1,0 +1,18 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    @media (prefers-color-scheme: light) {
+      .bg { fill: #29b6f6; }
+      .cross { fill: white; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #4fc3f7; }
+      .cross { fill: #020617; }
+    }
+  </style>
+  <!-- Rounded square background -->
+  <rect class="bg" width="180" height="180" rx="37" />
+  <!-- Medical cross: horizontal bar -->
+  <rect class="cross" x="40" y="72" width="100" height="36" rx="10" />
+  <!-- Medical cross: vertical bar -->
+  <rect class="cross" x="72" y="40" width="36" height="100" rx="10" />
+</svg>
