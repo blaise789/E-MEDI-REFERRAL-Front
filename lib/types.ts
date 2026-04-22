@@ -65,6 +65,8 @@ export interface Hospital {
   level: HospitalLevel;
   location: string;
   contactNumber: string | null;
+  beds?: BedCapacity[];
+  specialists?: Specialist[];
   createdAt: string;
   updatedAt: string;
 }
@@ -192,19 +194,38 @@ export interface LoginRequest {
 }
 
 export interface AuthResponse {
-  accessToken: string;
+  access_token: string;
   user: User;
+}
+
+export interface UpdateUserDto {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: Role;
+  hospitalId?: string | null;
+  telephone?: string | null;
+}
+
+export interface CreateUserDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password?: string;
+  role: Role;
+  hospitalId?: string;
 }
 
 // Referral creation
 export interface CreateReferralRequest {
   patientId: string;
+  referringHospitalId: string;
   receivingHospitalId: string;
-  urgency: ReferralUrgency;
+  urgency: "ROUTINE" | "EMERGENCY";
   reasonForTransfer: string;
   diagnosis: string;
-  preTransferTreatment?: string;
-  transportType?: string;
+  preTransferTreatment?: string | null;
+  transportType?: string | null;
 }
 
 export interface UpdateReferralStatusRequest {

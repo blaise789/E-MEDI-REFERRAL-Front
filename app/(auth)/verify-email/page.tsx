@@ -4,20 +4,20 @@ import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { InnSyncLogo } from "@/components/inn-sync-logo"
+import { ReferralLogo } from "@/components/referral-logo"
+import { useVerifyEmailMutation, useResendEmailCodeMutation } from "@/store/features/auth/authSlice"
+import { useToast } from "@/hooks/use-toast"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp"
-import { AuthService } from "@/lib/services/auth-service"
-import { useToast } from "@/hooks/use-toast"
 
 export default function VerifyEmailPage() {
   const [otp, setOtp] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [isResending, setIsResending] = useState(false)
+  const [verifyEmail, { isLoading }] = useVerifyEmailMutation()
+  const [resendEmailCode, { isLoading: isResending }] = useResendEmailCodeMutation()
   
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -29,9 +29,8 @@ export default function VerifyEmailPage() {
     if (e) e.preventDefault()
     if (otp.length < 6) return
 
-    setIsLoading(true)
     try {
-      await AuthService.verifyEmail(otp)
+      await verifyEmail(otp).unwrap()
       toast({
         title: "Account Verified",
         description: "Your email has been verified successfully. Please login.",
@@ -41,17 +40,14 @@ export default function VerifyEmailPage() {
       toast({
         variant: "destructive",
         title: "Verification Failed",
-        description: error.message || "Invalid or expired code.",
+        description: error.data?.message || error.message || "Invalid or expired code.",
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const handleResendCode = async () => {
-    setIsResending(true)
     try {
-      await AuthService.resendEmailCode(email)
+      await resendEmailCode(email).unwrap()
       toast({
         title: "Code Sent",
         description: "A new verification code has been sent to your email.",
@@ -60,36 +56,37 @@ export default function VerifyEmailPage() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not resend code. Try again later.",
+        description: error.data?.message || "Could not resend code. Try again later.",
       })
-    } finally {
-      setIsResending(false)
     }
   }
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden bg-primary lg:block">
-        <div className="absolute inset-0">
-          <img
-            src="/luxury-hotel-lobby-modern-rwanda-reception.jpg"
-            alt="Luxury hotel lobby"
-            className="h-full w-full object-cover opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/80 to-primary/70" />
+      <div className="relative hidden bg-primary lg:flex flex-col justify-between p-12 text-primary-foreground overflow-hidden">
+        {/* Decorative background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-20 -left-20 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -bottom-15 -right-15 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
         </div>
-        <div className="relative flex h-full flex-col justify-between p-12 text-primary-foreground">
-          <Link href="/" className="inline-flex">
-            <InnSyncLogo className="h-10 w-auto text-primary-foreground" />
-          </Link>
-          <div className="space-y-4">
-            <h1 className="text-balance text-4xl font-bold leading-tight">Secure Account Verification</h1>
-            <p className="text-pretty text-lg text-primary-foreground/90">
-              We'll help you gain access to your account securely. Enter the code sent to your email
-              to complete your registration.
-            </p>
-          </div>
-          <div className="text-sm text-primary-foreground/80">© 2026 INN-SYNC Ltd. All rights reserved.</div>
+
+        {/* Logo */}
+        <Link href="/" className="relative inline-flex">
+          <ReferralLogo className="h-10 w-auto text-primary-foreground [&_text]:fill-primary-foreground [&_circle]:fill-primary-foreground/30 [&_rect]:fill-primary-foreground" />
+        </Link>
+
+        {/* Center content */}
+        <div className="relative space-y-6">
+          <h1 className="text-balance text-4xl font-bold leading-tight">
+            Secure Account Verification
+          </h1>
+          <p className="text-pretty text-lg text-primary-foreground/90">
+            Gain secure access to the MediRefer portal. Enter the code sent to your email to complete registration.
+          </p>
+        </div>
+
+        <div className="relative text-sm text-primary-foreground/70">
+          © 2026 MediRefer · Ministry of Health, Rwanda
         </div>
       </div>
 
@@ -97,7 +94,7 @@ export default function VerifyEmailPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center gap-4 lg:hidden">
             <Link href="/">
-              <InnSyncLogo className="h-10 w-auto" />
+              <ReferralLogo className="h-10 w-auto" />
             </Link>
           </div>
 

@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast"
-import { InnSyncLogo } from "@/components/inn-sync-logo";
-import { AuthService } from "@/lib/services/auth-service";
+import { ReferralLogo } from "@/components/referral-logo";
+import { useRegisterMutation } from "@/store/features/auth/authSlice";
 import { Loader2, ArrowLeft } from "lucide-react";
 
 export default function RegisterPage() {
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast()
+  const [register, { isLoading }] = useRegisterMutation();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -26,32 +26,44 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     try {
-      await AuthService.register(formData);
+      await register(formData).unwrap();
       router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (error: any) {
       toast({
-      variant: "destructive",
-      title: "Registration Error",
-      description: error.message,
-    })
-    } finally {
-      setIsLoading(false);
+        variant: "destructive",
+        title: "Registration Error",
+        description: error.data?.message || error.message || "Failed to register",
+      });
     }
   };
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden bg-primary lg:block">
-        <div className="absolute inset-0">
-          <img src="/luxury-hotel-lobby-modern-rwanda-reception.jpg" className="h-full w-full object-cover opacity-90" alt="Lobby" />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/80 to-primary/70" />
+      <div className="relative hidden bg-primary lg:flex flex-col justify-between p-12 text-primary-foreground overflow-hidden">
+        {/* Decorative background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-20 -left-20 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -bottom-15 -right-15 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
         </div>
-        <div className="relative flex h-full flex-col justify-between p-12 text-primary-foreground">
-          <InnSyncLogo className="h-10 w-auto text-primary-foreground" />
-          <h1 className="text-4xl font-bold">Join the INN-SYNC Network</h1>
-          <div className="text-sm">© 2026 INN-SYNC Ltd.</div>
+
+        {/* Logo */}
+        <Link href="/" className="relative inline-flex">
+          <ReferralLogo className="h-10 w-auto text-primary-foreground [&_text]:fill-primary-foreground [&_circle]:fill-primary-foreground/30 [&_rect]:fill-primary-foreground" />
+        </Link>
+
+        {/* Center content */}
+        <div className="relative space-y-6">
+          <h1 className="text-balance text-4xl font-bold leading-tight">
+            Join the MediRefer Network
+          </h1>
+          <p className="text-pretty text-lg text-primary-foreground/90">
+            Empower patient healthcare with real-time transfer coordination.
+          </p>
+        </div>
+
+        <div className="relative text-sm text-primary-foreground/70">
+          © 2026 MediRefer · Ministry of Health, Rwanda
         </div>
       </div>
 

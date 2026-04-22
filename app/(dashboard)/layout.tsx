@@ -2,11 +2,11 @@
 
 import type React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
-import { AppHeader } from "@/components/app-header"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { Loader2 } from "lucide-react"
+import { DashboardShell } from "@/components/dashboard-shell"
 
 export default function DashboardLayout({
   children,
@@ -34,13 +34,5 @@ export default function DashboardLayout({
     return null
   }
 
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <AppSidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <AppHeader />
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-6">{children}</main>
-      </div>
-    </div>
-  )
+  return <DashboardShell>{children}</DashboardShell>;
 }

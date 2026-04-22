@@ -6,52 +6,58 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { InnSyncLogo } from "@/components/inn-sync-logo"
+import { ReferralLogo } from "@/components/referral-logo"
 import { ArrowLeft, Loader2, CheckCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AuthService } from "@/lib/services/auth-service"
+import { useRequestPasswordResetMutation } from "@/store/features/auth/authSlice"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ForgotPasswordPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [requestPasswordReset, { isLoading }] = useRequestPasswordResetMutation()
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [email, setEmail] = useState("")
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  try {
-    await AuthService.requestPasswordReset(email);
-    setIsSubmitted(true);
-  } catch (err) {
-    alert("Email not found or error occurred.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+    e.preventDefault();
+    try {
+      await requestPasswordReset(email).unwrap();
+      setIsSubmitted(true);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.data?.message || "Email not found or error occurred.",
+      });
+    }
+  };
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden bg-primary lg:block">
-        <div className="absolute inset-0">
-          <img
-            src="/luxury-hotel-lobby-modern-rwanda-reception.jpg"
-            alt="Luxury hotel lobby"
-            className="h-full w-full object-cover opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/80 to-primary/70" />
+      <div className="relative hidden bg-primary lg:flex flex-col justify-between p-12 text-primary-foreground overflow-hidden">
+        {/* Decorative background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-20 -left-20 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
+          <div className="absolute -bottom-15 -right-15 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
         </div>
-        <div className="relative flex h-full flex-col justify-between p-12 text-primary-foreground">
-          <Link href="/" className="inline-flex">
-            <InnSyncLogo className="h-10 w-auto text-primary-foreground" />
-          </Link>
-          <div className="space-y-4">
-            <h1 className="text-balance text-4xl font-bold leading-tight">Secure Password Recovery</h1>
-            <p className="text-pretty text-lg text-primary-foreground/90">
-              We'll help you regain access to your account securely. Enter your email and we'll send you reset
-              instructions.
-            </p>
-          </div>
-          <div className="text-sm text-primary-foreground/80">© 2026 INN-SYNC Ltd. All rights reserved.</div>
+
+        {/* Logo */}
+        <Link href="/" className="relative inline-flex">
+          <ReferralLogo className="h-10 w-auto text-primary-foreground [&_text]:fill-primary-foreground [&_circle]:fill-primary-foreground/30 [&_rect]:fill-primary-foreground" />
+        </Link>
+
+        {/* Center content */}
+        <div className="relative space-y-6">
+          <h1 className="text-balance text-4xl font-bold leading-tight">
+            Secure Password Recovery
+          </h1>
+          <p className="text-pretty text-lg text-primary-foreground/90">
+            We'll help you regain access to your account securely. Enter your email and we'll send you reset instructions.
+          </p>
+        </div>
+
+        <div className="relative text-sm text-primary-foreground/70">
+          © 2026 MediRefer · Ministry of Health, Rwanda
         </div>
       </div>
 
@@ -59,7 +65,7 @@ export default function ForgotPasswordPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center gap-4 lg:hidden">
             <Link href="/">
-              <InnSyncLogo className="h-10 w-auto" />
+              <ReferralLogo className="h-10 w-auto" />
             </Link>
           </div>
 

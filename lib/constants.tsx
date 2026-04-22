@@ -1,5 +1,7 @@
 import type { Role } from "@/lib/types";
 
+export const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 // ── App Branding ────────────────────────────────────────────
 export const APP_NAME = "MediRefer";
 export const APP_DESCRIPTION = "Digital Referral & Transfer Management";
