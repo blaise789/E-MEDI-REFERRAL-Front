@@ -27,7 +27,7 @@ import { useCreateUserMutation } from "@/store/features/user/userSlice";
 import { useGetHospitalsQuery } from "@/store/features/hospital/hospitalSlice";
 import { useAuth } from "@/lib/auth-context";
 import { Role } from "@/lib/types";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Eye, EyeOff } from "lucide-react";
 import { FormError } from "../ui/form-error";
 
 interface CreateUserDialogProps {
@@ -40,6 +40,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const { data: hospitals } = useGetHospitalsQuery();
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -86,7 +87,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] border-none shadow-2xl bg-card/95 backdrop-blur-xl">
+      <DialogContent className="sm:max-w-125 border-none shadow-2xl bg-card/95 backdrop-blur-xl">
         <DialogHeader>
           <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
             <UserPlus className="h-6 w-6" />
@@ -135,13 +136,23 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
           <div className="space-y-2">
             <Label htmlFor="password">Temporary Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Minimum 8 characters"
-              {...formik.getFieldProps("password")}
-              className="bg-background/50"
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Minimum 8 characters"
+                {...formik.getFieldProps("password")}
+                className="bg-background/50 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             <FormError message={formik.touched.password && formik.errors.password} />
           </div>
 
