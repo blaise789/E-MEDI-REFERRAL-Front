@@ -169,6 +169,7 @@ export default function ReferralDetailsPage() {
               <div className="space-y-6">
                 <DetailItem label="Full Name" value={`${referral.patient?.firstName} ${referral.patient?.lastName}`} />
                 <DetailItem label="National ID / Gender" value={`${referral.patient?.nationalId || "N/A"} · ${referral.patient?.gender}`} />
+                <DetailItem label="Insurance Provider" value={referral.patient?.insurance || "None / Out-of-pocket"} />
                 <DetailItem label="Initiated By" value={`${referral.initiatedBy?.firstName} ${referral.initiatedBy?.lastName} (${referral.initiatedBy?.role.replace("_", " ")})`} />
               </div>
               <div className="space-y-6">

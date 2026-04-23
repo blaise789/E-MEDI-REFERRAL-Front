@@ -4,6 +4,7 @@ import { apiSliceV1 } from "../../api/apiSliceV1";
 import type { Hospital, UpdateBedCapacityRequest, UpdateSpecialistStatusRequest } from "@/lib/types";
 
 export const hospitalApi = apiSliceV1.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     getHospitals: builder.query<Hospital[], void>({
       query: () => "hospitals",
@@ -33,6 +34,22 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
       }),
       invalidatesTags: ["Specialist", "Hospital"],
     }),
+    addBedCapacity: builder.mutation<void, { hospitalId: string; data: any }>({
+      query: ({ hospitalId, data }) => ({
+        url: `hospitals/${hospitalId}/beds`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["BedCapacity", "Hospital"],
+    }),
+    addSpecialist: builder.mutation<void, { hospitalId: string; data: any }>({
+      query: ({ hospitalId, data }) => ({
+        url: `hospitals/${hospitalId}/specialists`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Specialist", "Hospital"],
+    }),
   }),
 });
 
@@ -42,6 +59,8 @@ export const {
   useGetHospitalDashboardQuery,
   useUpdateBedCapacityMutation,
   useUpdateSpecialistStatusMutation,
+  useAddBedCapacityMutation,
+  useAddSpecialistMutation,
 } = hospitalApi;
 
 const hospitalSlice = createSlice({

@@ -69,16 +69,17 @@ export default function PatientsPage() {
                 <TableHead>National ID</TableHead>
                 <TableHead>Gender</TableHead>
                 <TableHead>Date of Birth</TableHead>
+                <TableHead>Insurance</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}><TableCell colSpan={5} className="h-12 animate-pulse bg-muted/20" /></TableRow>
+                  <TableRow key={i}><TableCell colSpan={6} className="h-12 animate-pulse bg-muted/20" /></TableRow>
                 ))
               ) : filteredPatients?.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="h-48 text-center text-muted-foreground">No patients found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground">No patients found.</TableCell></TableRow>
               ) : (
                 filteredPatients?.map((patient) => (
                   <TableRow key={patient.id} className="group hover:bg-muted/30">
@@ -98,6 +99,7 @@ export default function PatientsPage() {
                         {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}
                       </div>
                     </TableCell>
+                    <TableCell className="text-xs font-bold text-primary/70">{patient.insurance || "N/A"}</TableCell>
                     <TableCell className="text-right">
                        <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
                          View History

@@ -56,6 +56,7 @@ const validationSchemas = [
         nationalId: Yup.string().required("National ID is required").min(16, "National ID must be 16 characters"),
         dateOfBirth: Yup.string().required("Date of birth is required"),
         gender: Yup.string().required("Gender is required"),
+        insurance: Yup.string().nullable(),
       }),
       otherwise: (schema) => schema.strip(), // Remove newPatient from validation if patientId exists
     }),
@@ -103,7 +104,8 @@ export default function CreateReferralPage() {
          lastName: "",
          nationalId: "",
          dateOfBirth: "",
-         gender: "MALE"
+         gender: "MALE",
+         insurance: ""
       }
     },
     validationSchema: validationSchemas[currentStep],
@@ -304,19 +306,31 @@ export default function CreateReferralPage() {
                     />
                     <FormError message={formik.touched.newPatient?.nationalId && (formik.errors.newPatient as any)?.nationalId} />
                  </div>
-                 <div className="space-y-2">
-                    <Label>Date of Birth</Label>
-                    <Input 
-                      name="newPatient.dateOfBirth"
-                      type="date"
-                      disabled={!!formik.values.patientId} 
-                      className="bg-background/50 border-none ring-1 ring-border/50"
-                      value={formik.values.newPatient.dateOfBirth}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                    />
-                    <FormError message={formik.touched.newPatient?.dateOfBirth && (formik.errors.newPatient as any)?.dateOfBirth} />
-                 </div>
+                  <div className="space-y-2">
+                     <Label>Date of Birth</Label>
+                     <Input 
+                       name="newPatient.dateOfBirth"
+                       type="date"
+                       disabled={!!formik.values.patientId} 
+                       className="bg-background/50 border-none ring-1 ring-border/50"
+                       value={formik.values.newPatient.dateOfBirth}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                     <FormError message={formik.touched.newPatient?.dateOfBirth && (formik.errors.newPatient as any)?.dateOfBirth} />
+                  </div>
+                  <div className="space-y-2">
+                     <Label>Insurance Provider</Label>
+                     <Input 
+                       name="newPatient.insurance"
+                       disabled={!!formik.values.patientId} 
+                       placeholder="e.g. RSSB, MMI, Britam..." 
+                       className="bg-background/50 border-none ring-1 ring-border/50"
+                       value={formik.values.newPatient.insurance}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                  </div>
                </div>
              </div>
           )}
@@ -349,7 +363,7 @@ export default function CreateReferralPage() {
 
               <div className="space-y-4">
                  <Label className="text-sm font-semibold text-primary/80 uppercase tracking-wider">Receiving Hospital (Destination)</Label>
-                 <div className="grid gap-4">
+                  <div className="grid gap-4">
                     {hospitals?.filter(h => h.id !== formik.values.referringHospitalId).map(hospital => (
                       <div 
                         key={hospital.id} 
@@ -359,22 +373,54 @@ export default function CreateReferralPage() {
                           formik.values.receivingHospitalId === hospital.id ? "border-primary bg-primary/5 shadow-inner" : "border-transparent bg-muted/30 hover:bg-muted/50"
                         )}
                       >
-                         <div className="flex items-center gap-3">
+                         <div className="flex items-center gap-3 w-full">
                            <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center text-primary border shadow-sm">
                              <HospitalIcon className="h-5 w-5" />
                            </div>
-                           <div className="flex flex-col">
-                             <span className="font-semibold text-foreground">{hospital.name}</span>
-                             <span className="text-xs text-muted-foreground">{hospital.level.replace("_", " ")} · {hospital.location}</span>
+                           <div className="flex flex-col flex-1">
+                             <div className="flex justify-between items-start">
+                               <div className="flex flex-col">
+                                 <span className="font-semibold text-sm">{hospital.name}</span>
+                                 <span className="text-[10px] text-muted-foreground">{hospital.level.replace("_", " ")} · {hospital.location}</span>
+                               </div>
+                               {formik.values.receivingHospitalId === hospital.id && <ClipboardCheck className="h-4 w-4 text-primary" />}
+                             </div>
+                             
+                             <div className="mt-3 grid grid-cols-2 gap-2">
+                               <div className="bg-background/40 p-1.5 rounded-lg border border-border/50">
+                                 <span className="block text-[8px] uppercase font-bold text-muted-foreground mb-1">Available Beds</span>
+                                 <div className="flex flex-wrap gap-1">
+                                   {hospital.beds?.map(b => (
+                                     <Badge key={b.id} variant="secondary" className={cn(
+                                       "text-[8px] px-1 py-0",
+                                       (b.totalBeds - b.occupiedBeds) > 0 ? "text-emerald-600 bg-emerald-50" : "text-rose-600 bg-rose-50"
+                                     )}>
+                                       {b.wardType.split('_')[0]}: {b.totalBeds - b.occupiedBeds}
+                                     </Badge>
+                                   ))}
+                                   {(!hospital.beds || hospital.beds.length === 0) && <span className="text-[8px] text-muted-foreground italic">No report</span>}
+                                 </div>
+                               </div>
+                               <div className="bg-background/40 p-1.5 rounded-lg border border-border/50">
+                                 <span className="block text-[8px] uppercase font-bold text-muted-foreground mb-1">On-Call</span>
+                                 <div className="flex flex-wrap gap-1">
+                                   {Array.from(new Set(hospital.specialists?.filter(s => s.status !== "UNAVAILABLE").map(s => s.discipline))).map(d => (
+                                     <Badge key={d} variant="outline" className="text-[8px] px-1 py-0 border-primary/20 text-primary">
+                                       {d.split('_')[0]}
+                                     </Badge>
+                                   ))}
+                                   {(!hospital.specialists || hospital.specialists.length === 0) && <span className="text-[8px] text-muted-foreground italic">No report</span>}
+                                 </div>
+                               </div>
+                             </div>
                            </div>
                          </div>
-                         {formik.values.receivingHospitalId === hospital.id && <ClipboardCheck className="h-5 w-5 text-primary" />}
                       </div>
                     ))}
-                 </div>
-                 <FormError message={formik.touched.receivingHospitalId && formik.errors.receivingHospitalId} />
+                  </div>
+                  <FormError message={formik.touched.receivingHospitalId && formik.errors.receivingHospitalId} />
+                </div>
               </div>
-            </div>
           )}
 
           {currentStep === 2 && (

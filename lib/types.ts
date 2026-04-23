@@ -114,6 +114,7 @@ export interface Patient {
   lastName: string;
   dateOfBirth: string;
   gender: string;
+  insurance?: string | null;
   contactNumber: string | null;
   createdAt: string;
   updatedAt: string;
@@ -244,6 +245,7 @@ export interface CreatePatientRequest {
   lastName: string;
   dateOfBirth: string;
   gender: string;
+  insurance?: string;
   contactNumber?: string;
 }
 
