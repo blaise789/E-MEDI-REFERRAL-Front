@@ -24,26 +24,51 @@ import {
   MoreVertical,
   BriefcaseMedical
 } from "lucide-react";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useGetReferralsQuery } from "@/store/features/referral/referralSlice";
 import { format } from "date-fns";
 import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "@/components/ui/tabs";
+import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
 
 export default function ReferralsPage() {
+  const { user } = useAuth();
   const { data: referrals, isLoading } = useGetReferralsQuery();
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
 
-  const filteredReferrals = referrals?.filter(r => 
-    r.patient?.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.patient?.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.diagnosis.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredReferrals = referrals?.filter(r => {
+    // 1. Search filter
+    const matchesSearch = 
+      r.patient?.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.patient?.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.receivingHospital?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.referringHospital?.name.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    // 2. Tab filter
+    if (activeTab === "outgoing") return r.referringHospitalId === user?.hospitalId;
+    if (activeTab === "incoming") return r.receivingHospitalId === user?.hospitalId;
+    
+    return true;
+  });
+
+  const outgoingCount = referrals?.filter(r => r.referringHospitalId === user?.hospitalId).length || 0;
+  const incomingCount = referrals?.filter(r => r.receivingHospitalId === user?.hospitalId).length || 0;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -63,7 +88,7 @@ export default function ReferralsPage() {
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input 
-            placeholder="Search by patient or diagnosis..." 
+            placeholder="Search patients, hospitals, or diagnosis..." 
             className="pl-10 bg-background/50 border-none ring-1 ring-border/50"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -78,96 +103,130 @@ export default function ReferralsPage() {
         </div>
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="w-62.5">Patient</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>From / To</TableHead>
-                <TableHead>Date Initiated</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                 <TableRow>
-                   <TableCell colSpan={6} className="h-48 text-center">
-                     <div className="flex flex-col items-center gap-2">
-                       <BriefcaseMedical className="h-8 w-8 text-muted-foreground animate-pulse" />
-                       <span className="text-muted-foreground">Loading referrals...</span>
-                     </div>
-                   </TableCell>
-                 </TableRow>
-              ) : filteredReferrals?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
-                    No referrals found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredReferrals?.map((referral) => (
-                  <TableRow key={referral.id} className="group hover:bg-muted/30 transition-colors">
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-foreground">
-                          {referral.patient?.firstName} {referral.patient?.lastName}
-                        </span>
-                        <span className="text-xs text-muted-foreground line-clamp-1">
-                          {referral.diagnosis}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={referral.urgency === "EMERGENCY" ? "destructive" : "secondary"}>
-                        {referral.urgency}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={referral.status} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col text-sm">
-                        <span className="text-muted-foreground">From: {referral.referringHospital?.name}</span>
-                        <span className="text-primary font-medium">To: {referral.receivingHospital?.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {format(new Date(referral.createdAt), "MMM d, HH:mm")}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/referrals/${referral.id}`}>
-                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                            <DropdownMenuItem>Update Status</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">Archive</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                       </div>
-                    </TableCell>
+      <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+        <div className="flex items-center justify-between mb-4">
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="all" className="gap-2">
+              All Referrals
+              <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px]">{referrals?.length || 0}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="outgoing" className="gap-2">
+              Outgoing
+              {outgoingCount > 0 && <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px]">{outgoingCount}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="incoming" className="gap-2">
+              Incoming
+              {incomingCount > 0 && <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[10px] bg-primary text-primary-foreground">{incomingCount}</Badge>}
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value={activeTab} className="mt-0">
+          <Card className="border-none shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader className="bg-muted/50 text-[11px] uppercase tracking-wider font-bold">
+                  <TableRow>
+                    <TableHead className="w-75">Patient</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>From / To</TableHead>
+                    <TableHead>Date Initiated</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                     <TableRow>
+                       <TableCell colSpan={6} className="h-48 text-center">
+                         <div className="flex flex-col items-center gap-2">
+                           <BriefcaseMedical className="h-8 w-8 text-muted-foreground animate-pulse" />
+                           <span className="text-muted-foreground">Loading referrals...</span>
+                         </div>
+                       </TableCell>
+                     </TableRow>
+                  ) : filteredReferrals?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                          <Search className="h-8 w-8 text-muted-foreground/20" />
+                          <span>No referrals match your current view.</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredReferrals?.map((referral) => (
+                      <TableRow key={referral.id} className="group hover:bg-muted/30 transition-colors">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-foreground">
+                              {referral.patient?.firstName} {referral.patient?.lastName}
+                            </span>
+                            <span className="text-xs text-muted-foreground line-clamp-1">
+                              {referral.diagnosis}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={referral.urgency === "EMERGENCY" ? "destructive" : "secondary"}>
+                            {referral.urgency}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={referral.status} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-[11px]">
+                            <span className={cn(
+                              "font-medium",
+                              referral.referringHospitalId === user?.hospitalId ? "text-primary" : "text-muted-foreground"
+                            )}>From: {referral.referringHospital?.name}</span>
+                            <span className={cn(
+                              "font-medium",
+                              referral.receivingHospitalId === user?.hospitalId ? "text-primary" : "text-muted-foreground"
+                            )}>To: {referral.receivingHospital?.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(referral.createdAt), "MMM d, HH:mm")}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                           <div className="flex items-center justify-end gap-2">
+                            <Link href={`/referrals/${referral.id}`}>
+                              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/referrals/${referral.id}`}>View Details</Link>
+                                </DropdownMenuItem>
+                                {referral.receivingHospitalId === user?.hospitalId && (
+                                  <DropdownMenuItem>Update Status</DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem className="text-destructive">Archive</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
@@ -190,8 +249,4 @@ function StatusBadge({ status }: { status: string }) {
       {status.replace("_", " ")}
     </Badge>
   );
-}
-
-function cn(...inputs: any) {
-  return inputs.filter(Boolean).join(" ");
 }
