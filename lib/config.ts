@@ -23,12 +23,7 @@ export const ROLE_MODULES: Record<Role, string[]> = {
     "specialists",
     "notifications",
   ],
-  CLINICIAN: [
-    "dashboard",
-    "referrals",
-    "patients",
-    "notifications",
-  ],
+  CLINICIAN: ["dashboard", "referrals", "patients", "notifications"],
 };
 
 // ── Action-level permissions ─────────────────────────────────

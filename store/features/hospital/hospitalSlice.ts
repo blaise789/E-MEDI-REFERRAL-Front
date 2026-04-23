@@ -8,7 +8,13 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
   endpoints: (builder) => ({
     getHospitals: builder.query<Hospital[], void>({
       query: () => "hospitals",
-      providesTags: ["Hospital"],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: "Hospital" as const, id })),
+              { type: "Hospital", id: "LIST" },
+            ]
+          : [{ type: "Hospital", id: "LIST" }],
     }),
     getHospitalById: builder.query<Hospital, string>({
       query: (id) => `hospitals/${id}`,
@@ -16,7 +22,11 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
     }),
     getHospitalDashboard: builder.query<any, string>({
       query: (id) => `hospitals/dashboard/${id}`,
-      providesTags: (result, error, id) => [{ type: "Hospital", id }, "BedCapacity", "Specialist"],
+      providesTags: (result, error, id) => [
+        { type: "Hospital", id },
+        "BedCapacity",
+        "Specialist",
+      ],
     }),
     updateBedCapacity: builder.mutation<void, { bedId: string; data: UpdateBedCapacityRequest }>({
       query: ({ bedId, data }) => ({
@@ -24,7 +34,25 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: ["BedCapacity", "Hospital"],
+      invalidatesTags: (result, error, { bedId }) => ["BedCapacity"],
+      async onQueryStarted({ bedId, data }, { dispatch, queryFulfilled }) {
+        // Optimistic update for getHospitals
+        const patchResult = dispatch(
+          hospitalApi.util.updateQueryData("getHospitals", undefined, (draft) => {
+            draft.forEach((h) => {
+              const bed = h.beds?.find((b) => b.id === bedId);
+              if (bed) {
+                bed.occupiedBeds = data.occupiedBeds;
+              }
+            });
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
     updateSpecialistStatus: builder.mutation<void, { specialistId: string; data: UpdateSpecialistStatusRequest }>({
       query: ({ specialistId, data }) => ({
@@ -32,7 +60,24 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: ["Specialist", "Hospital"],
+      invalidatesTags: ["Specialist"],
+      async onQueryStarted({ specialistId, data }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          hospitalApi.util.updateQueryData("getHospitals", undefined, (draft) => {
+            draft.forEach((h) => {
+              const spec = h.specialists?.find((s) => s.id === specialistId);
+              if (spec) {
+                spec.status = data.status;
+              }
+            });
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
     addBedCapacity: builder.mutation<void, { hospitalId: string; data: any }>({
       query: ({ hospitalId, data }) => ({
@@ -40,7 +85,10 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["BedCapacity", "Hospital"],
+      invalidatesTags: (result, error, { hospitalId }) => [
+        { type: "Hospital", id: hospitalId },
+        "BedCapacity",
+      ],
     }),
     addSpecialist: builder.mutation<void, { hospitalId: string; data: any }>({
       query: ({ hospitalId, data }) => ({
@@ -48,7 +96,35 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Specialist", "Hospital"],
+      invalidatesTags: (result, error, { hospitalId }) => [
+        { type: "Hospital", id: hospitalId },
+        "Specialist",
+      ],
+    }),
+    recalibrateBedCapacity: builder.mutation<void, { bedId: string; data: { occupiedBeds: number } }>({
+      query: ({ bedId, data }) => ({
+        url: `hospitals/beds/${bedId}/recalibrate`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["BedCapacity"],
+      async onQueryStarted({ bedId, data }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          hospitalApi.util.updateQueryData("getHospitals", undefined, (draft) => {
+            draft.forEach((h) => {
+              const bed = h.beds?.find((b) => b.id === bedId);
+              if (bed) {
+                bed.occupiedBeds = data.occupiedBeds;
+              }
+            });
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
   }),
 });
@@ -61,6 +137,7 @@ export const {
   useUpdateSpecialistStatusMutation,
   useAddBedCapacityMutation,
   useAddSpecialistMutation,
+  useRecalibrateBedCapacityMutation,
 } = hospitalApi;
 
 const hospitalSlice = createSlice({

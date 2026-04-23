@@ -11,15 +11,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/auth-context"
 import { ROLE_LABELS } from "@/lib/types"
 import Link from "next/link"
+import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
+import { useGetUnreadCountQuery } from "@/store/features/notification/notificationSlice"
+import { useSocket } from "@/lib/socket-context"
 
 export function AppHeader() {
   const { user, logout } = useAuth()
+  const { isConnected } = useSocket()
+  const { data: unreadData } = useGetUnreadCountQuery(undefined, {
+    skip: !user,
+  })
 
   const hospitalName = user?.hospital?.name ?? "MediRefer"
+  const unreadCount = unreadData?.count ?? 0
 
   const currentDate = new Date().toLocaleDateString("en-RW", {
     weekday: "long",
@@ -39,20 +47,31 @@ export function AppHeader() {
   const displayRole = user?.role ? ROLE_LABELS[user.role] : "Staff"
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-6">
-      <div className="flex flex-col">
-        <h1 className="text-lg font-semibold leading-none">{hospitalName}</h1>
-        <p className="text-xs text-muted-foreground leading-none mt-1">{currentDate}</p>
+    <header className="flex h-16 items-center justify-between border-b bg-card px-6 sticky top-0 z-40 backdrop-blur-md bg-opacity-70">
+      <div className="flex items-center gap-6">
+        <div className="flex flex-col">
+          <h1 className="text-lg font-bold leading-none tracking-tight">{hospitalName}</h1>
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1">{currentDate}</p>
+        </div>
+
+        <div className="flex items-center gap-2 text-[10px] font-bold bg-muted/50 px-3 py-1 rounded-full border">
+          <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+          <span className={isConnected ? 'text-green-600' : 'text-red-500'}>
+            {isConnected ? 'LIVE' : 'OFFLINE'}
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
         {/* Notification bell */}
         <Link href="/notifications">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -right-1 -top-1 h-4 w-4 rounded-full p-0 flex items-center justify-center text-[10px] bg-destructive text-white">
-              !
-            </Badge>
+          <Button variant="ghost" size="icon" className="relative hover:bg-primary/5 transition-all">
+            <Bell className={cn("h-5 w-5", unreadCount > 0 && "text-primary")} />
+            {unreadCount > 0 && (
+              <Badge className="absolute -right-1 -top-1 h-5 min-w-5 rounded-full p-0 flex items-center justify-center text-[10px] bg-destructive text-white animate-in zoom-in duration-300">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Badge>
+            )}
           </Button>
         </Link>
 
