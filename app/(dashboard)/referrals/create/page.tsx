@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
+import { WARD_TYPE_LABELS, WardType, SPECIALIST_DISCIPLINE_LABELS, SpecialistDiscipline } from "@/lib/types";
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -94,6 +95,8 @@ export default function CreateReferralPage() {
       patientId: "",
       referringHospitalId: user?.hospitalId || "", // Default to user's hospital if assigned
       receivingHospitalId: "",
+      targetWardType: undefined,
+      targetSpecialistId: undefined,
       urgency: "ROUTINE",
       reasonForTransfer: "",
       diagnosis: "",
@@ -134,6 +137,8 @@ export default function CreateReferralPage() {
           patientId,
           referringHospitalId: values.referringHospitalId,
           receivingHospitalId: values.receivingHospitalId,
+          targetWardType: values.targetWardType,
+          targetSpecialistId: values.targetSpecialistId,
           urgency: values.urgency as any,
           reasonForTransfer: values.reasonForTransfer,
           diagnosis: values.diagnosis,
@@ -194,6 +199,8 @@ export default function CreateReferralPage() {
   };
 
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
+
+  const selectedReceivingHospital = hospitals?.find(h => h.id === formik.values.receivingHospitalId);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -453,6 +460,53 @@ export default function CreateReferralPage() {
                  <FormError message={formik.touched.urgency && formik.errors.urgency} />
                </div>
 
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label>Target Ward (Optional)</Label>
+                    <Select 
+                      value={formik.values.targetWardType || "NONE"} 
+                      onValueChange={(val) => formik.setFieldValue("targetWardType", val === "NONE" ? undefined : val)}
+                    >
+                      <SelectTrigger className="bg-background/50 border-none ring-1 ring-border/50 h-12">
+                         <SelectValue placeholder="Any ward type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                         <SelectItem value="NONE">Any Ward / Auto-assign</SelectItem>
+                         {selectedReceivingHospital?.beds?.map(b => (
+                           <SelectItem key={b.wardType} value={b.wardType}>
+                             {WARD_TYPE_LABELS[b.wardType as WardType] || b.wardType} - ({b.totalBeds - b.occupiedBeds} free)
+                           </SelectItem>
+                         ))}
+                      </SelectContent>
+                    </Select>
+                 </div>
+                 <div className="space-y-2">
+                    <Label>Target Specialist (Optional)</Label>
+                    <Select 
+                      value={formik.values.targetSpecialistId || "NONE"} 
+                      onValueChange={(val) => {
+                        if (val === "NONE") {
+                           formik.setFieldValue("targetSpecialistId", undefined);
+                        } else {
+                           formik.setFieldValue("targetSpecialistId", val);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="bg-background/50 border-none ring-1 ring-border/50 h-12">
+                         <SelectValue placeholder="Any specialist" />
+                      </SelectTrigger>
+                      <SelectContent>
+                         <SelectItem value="NONE">Any Specialist / Auto-assign</SelectItem>
+                         {selectedReceivingHospital?.specialists?.map(s => (
+                           <SelectItem key={s.id} value={s.id}>
+                             Dr. {s.lastName} {s.firstName} - ({SPECIALIST_DISCIPLINE_LABELS[s.discipline as SpecialistDiscipline] || s.discipline})
+                           </SelectItem>
+                         ))}
+                      </SelectContent>
+                    </Select>
+                 </div>
+               </div>
+
                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Diagnosis</Label>
@@ -508,6 +562,21 @@ export default function CreateReferralPage() {
                        <div className="text-sm border-b pb-2 flex justify-between">
                          <span className="text-muted-foreground">Urgency:</span>
                          <Badge variant={formik.values.urgency === "EMERGENCY" ? "destructive" : "secondary"}>{formik.values.urgency}</Badge>
+                       </div>
+                       <div className="text-sm border-b pb-2 flex justify-between">
+                         <span className="text-muted-foreground">Target Ward:</span>
+                         <span className="font-medium text-right ml-2">{formik.values.targetWardType ? WARD_TYPE_LABELS[formik.values.targetWardType as WardType] || formik.values.targetWardType : "Any / Not specified"}</span>
+                       </div>
+                       <div className="text-sm border-b pb-2 flex justify-between">
+                         <span className="text-muted-foreground">Required Specialist:</span>
+                         <span className="font-medium text-right ml-2">
+                           {formik.values.targetSpecialistId 
+                             ? (() => {
+                               const spec = selectedReceivingHospital?.specialists?.find(s => s.id === formik.values.targetSpecialistId);
+                               return spec ? `Dr. ${spec.lastName} (${SPECIALIST_DISCIPLINE_LABELS[spec.discipline as SpecialistDiscipline] || spec.discipline})` : "Dr. Selected";
+                               })() 
+                             : "Any / Not specified"}
+                         </span>
                        </div>
                        <div className="text-sm border-b pb-2 flex justify-between gap-10">
                          <span className="text-muted-foreground">Diagnosis:</span>

@@ -126,6 +126,14 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
         }
       },
     }),
+    addHospital: builder.mutation<Hospital, any>({
+      query: (data) => ({
+        url: `hospitals`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: [{ type: "Hospital", id: "LIST" }],
+    }),
   }),
 });
 
@@ -138,6 +146,7 @@ export const {
   useAddBedCapacityMutation,
   useAddSpecialistMutation,
   useRecalibrateBedCapacityMutation,
+  useAddHospitalMutation,
 } = hospitalApi;
 
 const hospitalSlice = createSlice({

@@ -27,7 +27,7 @@ export function AppHeader() {
   })
 
   const hospitalName = user?.hospital?.name ?? "MediRefer"
-  const unreadCount = unreadData?.count ?? 0
+  const unreadCount = typeof unreadData === "number" ? unreadData : 0
 
   const currentDate = new Date().toLocaleDateString("en-RW", {
     weekday: "long",

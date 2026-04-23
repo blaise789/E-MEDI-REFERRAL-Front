@@ -222,6 +222,9 @@ export interface CreateReferralRequest {
   patientId: string;
   referringHospitalId: string;
   receivingHospitalId: string;
+  targetWardType?: string;
+
+  targetSpecialistId?: string;
   urgency: "ROUTINE" | "EMERGENCY";
   reasonForTransfer: string;
   diagnosis: string;

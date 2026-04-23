@@ -79,10 +79,12 @@ const navItems: NavItem[] = [
   { title: "Users", href: "/users", icon: UserCog, module: "users" },
 ];
 
+import { useGetUnreadCountQuery } from "@/store/features/notification/notificationSlice";
+
 export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-
+  
   const role = user?.role as Role | undefined;
   const accessibleModules = role ? getModuleAccess(role) : [];
 

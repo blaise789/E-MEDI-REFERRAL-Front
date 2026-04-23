@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useDispatch } from "react-redux";
 import { hospitalApi } from "@/store/features/hospital/hospitalSlice";
 import { referralApi } from "@/store/features/referral/referralSlice";
+import { notificationApi } from "@/store/features/notification/notificationSlice";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -106,6 +107,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     socketInstance.on("NOTIFICATION_CREATED", (data) => {
       console.log("Live Notification received:", data);
+      
+      // Force UI to refetch the unread count when a live notification arrives!
+      dispatch(notificationApi.util.invalidateTags(["Notification"]));
+
       if (user?.id === data.recipientId) {
         toast({
           title: "New Update",

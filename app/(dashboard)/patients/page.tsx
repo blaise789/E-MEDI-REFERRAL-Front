@@ -23,12 +23,21 @@ import {
   Clipboard
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useGetPatientsQuery } from "@/store/features/patient/patientSlice";
+import { useGetPatientsQuery, useRegisterPatientMutation } from "@/store/features/patient/patientSlice";
 import { format } from "date-fns";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function PatientsPage() {
   const { data: patients, isLoading } = useGetPatientsQuery();
+  const [registerPatient, { isLoading: isRegistering }] = useRegisterPatientMutation();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const filteredPatients = patients?.filter(p => 
     p.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -36,16 +45,115 @@ export default function PatientsPage() {
     p.nationalId?.includes(searchTerm)
   );
 
+  const formik = useFormik({
+    initialValues: {
+      firstName: "",
+      lastName: "",
+      nationalId: "",
+      gender: "",
+      dateOfBirth: "",
+      contactNumber: "",
+      insurance: "",
+    },
+    validationSchema: Yup.object({
+      firstName: Yup.string().required("First name is required"),
+      lastName: Yup.string().required("Last name is required"),
+      gender: Yup.string().required("Gender is required"),
+      dateOfBirth: Yup.date().required("Date of birth is required"),
+      nationalId: Yup.string().optional(),
+    }),
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        await registerPatient({
+          ...values,
+          dateOfBirth: new Date(values.dateOfBirth).toISOString(),
+        }).unwrap();
+        toast({ title: "Success", description: "Patient registered efficiently!" });
+        setIsDialogOpen(false);
+        resetForm();
+      } catch (err: any) {
+        toast({ title: "Error", description: err.data?.message || "Failed to register patient", variant: "destructive" });
+      }
+    }
+  });
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <PageHeader 
         title="Patient Management" 
         description="Search and manage patient medical records and transfer histories."
       >
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Register Patient
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Register Patient
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+               <DialogTitle>Register New Patient</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={formik.handleSubmit} className="space-y-4 py-2">
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                   <Label>First Name</Label>
+                   <Input id="firstName" {...formik.getFieldProps("firstName")} />
+                   {formik.touched.firstName && formik.errors.firstName && <div className="text-xs text-destructive">{formik.errors.firstName as string}</div>}
+                 </div>
+                 <div className="space-y-2">
+                   <Label>Last Name</Label>
+                   <Input id="lastName" {...formik.getFieldProps("lastName")} />
+                   {formik.touched.lastName && formik.errors.lastName && <div className="text-xs text-destructive">{formik.errors.lastName as string}</div>}
+                 </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                   <Label>National ID</Label>
+                   <Input id="nationalId" {...formik.getFieldProps("nationalId")} placeholder="Optional" />
+                 </div>
+                 <div className="space-y-2">
+                   <Label>Gender</Label>
+                   <Select value={formik.values.gender} onValueChange={(val) => formik.setFieldValue("gender", val)}>
+                     <SelectTrigger>
+                       <SelectValue placeholder="Select" />
+                     </SelectTrigger>
+                     <SelectContent>
+                        <SelectItem value="MALE">Male</SelectItem>
+                        <SelectItem value="FEMALE">Female</SelectItem>
+                     </SelectContent>
+                   </Select>
+                   {formik.touched.gender && formik.errors.gender && <div className="text-xs text-destructive">{formik.errors.gender as string}</div>}
+                 </div>
+               </div>
+
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                   <Label>Date of Birth</Label>
+                   <Input type="date" id="dateOfBirth" {...formik.getFieldProps("dateOfBirth")} />
+                   {formik.touched.dateOfBirth && formik.errors.dateOfBirth && <div className="text-xs text-destructive">{formik.errors.dateOfBirth as string}</div>}
+                 </div>
+                 <div className="space-y-2">
+                   <Label>Contact Number</Label>
+                   <Input id="contactNumber" {...formik.getFieldProps("contactNumber")} placeholder="+250..." />
+                 </div>
+               </div>
+
+               <div className="space-y-2">
+                 <Label>Insurance Details</Label>
+                 <Input id="insurance" {...formik.getFieldProps("insurance")} placeholder="Mutuelle/RAMA" />
+               </div>
+
+               <div className="flex justify-end gap-3 pt-4">
+                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+                 <Button type="submit" disabled={isRegistering}>
+                   {isRegistering ? "Registering..." : "Complete Registration"}
+                 </Button>
+               </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
 
       <div className="bg-card/50 backdrop-blur-sm p-4 rounded-xl border border-border/50">
