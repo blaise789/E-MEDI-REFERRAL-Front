@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import type React from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const [otp, setOtp] = useState("")
   const [verifyEmail, { isLoading }] = useVerifyEmailMutation()
   const [resendEmailCode, { isLoading: isResending }] = useResendEmailCodeMutation()
@@ -163,5 +164,17 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <VerifyEmailForm />
+    </Suspense>
   )
 }

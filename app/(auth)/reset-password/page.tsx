@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +12,7 @@ import { useSearchParams } from "next/navigation"
 import { useResetPasswordMutation } from "@/store/features/auth/authSlice"
 import { useToast } from "@/hooks/use-toast"
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const [resetPassword, { isLoading }] = useResetPasswordMutation()
@@ -186,3 +185,16 @@ export default function ResetPasswordPage() {
     </div>
   )
 }
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
+  )
+}
+
