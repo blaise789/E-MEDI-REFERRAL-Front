@@ -5,7 +5,7 @@ export const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL;
 // ── App Branding ────────────────────────────────────────────
 export const APP_NAME = "MediRefer";
 export const APP_DESCRIPTION = "Digital Referral & Transfer Management";
-export const COMPANY_NAME = "Ministry of Health, Rwanda";
+export const COMPANY_NAME = "MediRefer";
 export const COMPANY_PHONE = "+250788000000";
 export const COMPANY_LOCATION = "Kigali, Rwanda";
 

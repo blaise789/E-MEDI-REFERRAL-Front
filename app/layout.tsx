@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     "digital health",
     "referral management",
   ],
-  authors: [{ name: "MediRefer · Ministry of Health, Rwanda" }],
+  authors: [{ name: "MediRefer" }],
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",

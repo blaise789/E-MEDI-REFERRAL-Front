@@ -262,7 +262,6 @@ export default function LandingPage() {
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
             <ReferralLogo className="h-8 w-auto" />
             <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
-              <span>Ministry of Health, Rwanda</span>
               <span>Kigali, Rwanda</span>
               <span>© 2026 MediRefer. All rights reserved.</span>
             </div>

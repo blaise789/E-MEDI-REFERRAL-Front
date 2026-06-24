@@ -87,7 +87,7 @@ function VerifyEmailForm() {
         </div>
 
         <div className="relative text-sm text-primary-foreground/70">
-          © 2026 MediRefer · Ministry of Health, Rwanda
+          © 2026 MediRefer
         </div>
       </div>
 
