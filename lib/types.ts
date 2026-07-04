@@ -30,18 +30,13 @@ export type SpecialistDiscipline =
 
 export type SpecialistStatus =
   | "AVAILABLE"
-  | "IN_THEATRE"
-  | "ON_CALL"
   | "UNAVAILABLE";
 
-export type ReferralUrgency = "ROUTINE" | "EMERGENCY";
 
 export type ReferralStatus =
   | "SUBMITTED"
-  | "ACCEPTED"
-  | "REJECTED"
-  | "IN_TRANSIT"
   | "ADMITTED"
+  | "DISCHARGED"
   | "COUNTER_REFERRED";
 
 // ============================================================
@@ -109,13 +104,16 @@ export interface Specialist {
 
 export interface Patient {
   id: string;
-  nationalId: string | null;
+  nationalId: string;
   firstName: string;
   lastName: string;
   dateOfBirth: string;
   gender: string;
   insurance?: string | null;
   contactNumber: string | null;
+  email?: string | null;
+  isActive: boolean;
+  hospitalId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -150,12 +148,14 @@ export interface Referral {
   receivingHospital?: Hospital;
   initiatedById: string;
   initiatedBy?: User;
-  urgency: ReferralUrgency;
   status: ReferralStatus;
   reasonForTransfer: string;
   diagnosis: string;
   preTransferTreatment: string | null;
-  transportType: string | null;
+  transportType: 'AMBULANCE' | 'PRIVATE' | null;
+  targetWardType?: string | null;
+  targetSpecialistId?: string | null;
+  targetSpecialist?: Specialist | null;
   counterReferral?: CounterReferral;
   logs?: AuditLog[];
   createdAt: string;
@@ -223,9 +223,7 @@ export interface CreateReferralRequest {
   referringHospitalId: string;
   receivingHospitalId: string;
   targetWardType?: string;
-
   targetSpecialistId?: string;
-  urgency: "ROUTINE" | "EMERGENCY";
   reasonForTransfer: string;
   diagnosis: string;
   preTransferTreatment?: string | null;
@@ -243,13 +241,15 @@ export interface CreateCounterReferralRequest {
 
 // Patient creation
 export interface CreatePatientRequest {
-  nationalId?: string;
+  nationalId: string;
   firstName: string;
   lastName: string;
   dateOfBirth: string;
   gender: string;
   insurance?: string;
   contactNumber?: string;
+  email?: string;
+  hospitalId?: string;
 }
 
 // Bed capacity update
@@ -259,7 +259,7 @@ export interface UpdateBedCapacityRequest {
 
 // Specialist update
 export interface UpdateSpecialistStatusRequest {
-  status: SpecialistStatus;
+  status: 'AVAILABLE' | 'UNAVAILABLE';
 }
 
 // ============================================================
@@ -287,9 +287,7 @@ export const SPECIALIST_DISCIPLINE_LABELS: Record<SpecialistDiscipline, string> 
   INTENSIVE_CARE: "Intensive Care",
 };
 
-export const ROLE_LABELS: Record<Role, string> = {
-  CLINICIAN: "Clinician",
-  FOCAL_PERSON: "Focal Person",
+export const ROLE_LABELS: Record<string, string> = {
   HOSPITAL_ADMIN: "Hospital Admin",
   SYS_ADMIN: "System Admin",
 };

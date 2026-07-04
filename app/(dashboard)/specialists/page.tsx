@@ -181,14 +181,7 @@ export default function SpecialistsPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-4">
-           {!isHospitalStaff && (
-             <>
-               <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">12 Available Now</Badge>
-               <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">4 In Theatre</Badge>
-             </>
-           )}
-        </div>
+
       </div>
 
       <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm overflow-hidden">
@@ -249,10 +242,8 @@ export default function SpecialistsPage() {
                            <SelectValue />
                          </SelectTrigger>
                          <SelectContent>
-                           <SelectItem value="AVAILABLE">Available</SelectItem>
-                           <SelectItem value="ON_CALL">On Call</SelectItem>
-                           <SelectItem value="IN_THEATRE">In Theatre</SelectItem>
-                           <SelectItem value="UNAVAILABLE">Unavailable</SelectItem>
+                           <SelectItem value="AVAILABLE">✅ Available</SelectItem>
+                           <SelectItem value="UNAVAILABLE">🔴 Unavailable</SelectItem>
                          </SelectContent>
                        </Select>
                     ) : (
@@ -282,8 +273,6 @@ export default function SpecialistsPage() {
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     AVAILABLE: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    IN_THEATRE: "bg-amber-100 text-amber-700 border-amber-200",
-    ON_CALL: "bg-blue-100 text-blue-700 border-blue-200",
     UNAVAILABLE: "bg-rose-100 text-rose-700 border-rose-200",
   };
 
@@ -293,11 +282,9 @@ function StatusBadge({ status }: { status: string }) {
       className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase", styles[status] || "bg-gray-100 text-gray-600")}
     >
       <div className={cn("h-1.5 w-1.5 rounded-full mr-2", 
-        status === "AVAILABLE" ? "bg-emerald-500" : 
-        status === "IN_THEATRE" ? "bg-amber-500" : 
-        status === "ON_CALL" ? "bg-blue-500" : "bg-rose-500"
+        status === "AVAILABLE" ? "bg-emerald-500" : "bg-rose-500"
       )} />
-      {status.replace("_", " ")}
+      {status}
     </Badge>
   );
 }

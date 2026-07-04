@@ -5,9 +5,21 @@ import type { Referral, CreateReferralRequest, ReferralStatus, CounterReferral, 
 
 export const referralApi = apiSliceV1.injectEndpoints({
   endpoints: (builder) => ({
-    getReferrals: builder.query<Referral[], void>({
-      query: () => "referrals",
-      providesTags: ["Referral"],
+    getReferrals: builder.query<Referral[], { hospitalId?: string; search?: string; nationalId?: string; status?: string; startDate?: string; endDate?: string } | void>({
+      query: (filters) => {
+        const params = new URLSearchParams();
+        if (filters) {
+          if ('hospitalId' in filters && filters.hospitalId) params.set('hospitalId', filters.hospitalId);
+          if ('search' in filters && filters.search) params.set('search', filters.search);
+          if ('nationalId' in filters && filters.nationalId) params.set('nationalId', filters.nationalId);
+          if ('status' in filters && filters.status) params.set('status', filters.status);
+          if ('startDate' in filters && filters.startDate) params.set('startDate', filters.startDate);
+          if ('endDate' in filters && filters.endDate) params.set('endDate', filters.endDate);
+        }
+        const qs = params.toString();
+        return qs ? `referrals?${qs}` : 'referrals';
+      },
+      providesTags: ['Referral'],
     }),
     getReferralById: builder.query<Referral, string>({
       query: (id) => `referrals/${id}`,

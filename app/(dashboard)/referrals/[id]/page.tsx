@@ -158,9 +158,6 @@ export default function ReferralDetailsPage() {
                   Patient Profile
                 </CardTitle>
                 <div className="flex gap-2">
-                   {referral.urgency === "EMERGENCY" && (
-                     <Badge variant="destructive" className="animate-pulse">Critical / Emergency</Badge>
-                   )}
                    <Badge variant="secondary">Case ID: {referral.id.substring(0, 8)}</Badge>
                 </div>
               </div>
@@ -175,7 +172,19 @@ export default function ReferralDetailsPage() {
               <div className="space-y-6">
                 <DetailItem label="Clinical Diagnosis" value={referral.diagnosis} />
                 <DetailItem label="Reason for Transfer" value={referral.reasonForTransfer} />
-                <DetailItem label="Transport Mode" value={referral.transportType || "Ambulance"} />
+                <DetailItem 
+                  label="Transport Mode" 
+                  value={(referral as any).transportType === 'PRIVATE' ? '🚗 Private Vehicle' : '🚑 Ambulance'} 
+                />
+                {referral.targetWardType && (
+                  <DetailItem label="Target Ward" value={referral.targetWardType.replace(/_/g, ' ')} />
+                )}
+                {(referral as any).targetSpecialist && (
+                  <DetailItem 
+                    label="Assigned Specialist" 
+                    value={`Dr. ${(referral as any).targetSpecialist.firstName} ${(referral as any).targetSpecialist.lastName} — ${(referral as any).targetSpecialist.discipline?.replace(/_/g, ' ')}`}
+                  />
+                )}
               </div>
             </CardContent>
           </Card>
@@ -251,23 +260,10 @@ export default function ReferralDetailsPage() {
                    <>
                      {referral.status === "SUBMITTED" && (
                        <>
-                         <Button className="w-full bg-emerald-600 hover:bg-emerald-700 h-11" onClick={() => handleUpdateStatus("ACCEPTED")} disabled={isUpdating}>
-                           <CheckCircle2 className="h-4 w-4 mr-2" /> Accept Transfer
-                         </Button>
-                         <Button variant="outline" className="w-full text-destructive border-destructive/20 h-11 hover:bg-destructive/5" onClick={() => handleUpdateStatus("REJECTED")} disabled={isUpdating}>
-                           <XCircle className="h-4 w-4 mr-2" /> Reject Admission
+                         <Button className="w-full h-11" onClick={() => handleUpdateStatus("ADMITTED")} disabled={isUpdating}>
+                           <Plus className="h-4 w-4 mr-2" /> Confirm Admission
                          </Button>
                        </>
-                     )}
-                     {referral.status === "ACCEPTED" && (
-                       <Button className="w-full h-11" onClick={() => handleUpdateStatus("IN_TRANSIT")} disabled={isUpdating}>
-                         <Truck className="h-4 w-4 mr-2" /> Dispatch Ambulance
-                       </Button>
-                     )}
-                     {referral.status === "IN_TRANSIT" && (
-                        <Button className="w-full h-11" onClick={() => handleUpdateStatus("ADMITTED")} disabled={isUpdating}>
-                          <Plus className="h-4 w-4 mr-2" /> Confirmed Admission
-                        </Button>
                      )}
                      {referral.status === "ADMITTED" && (
                         <Button 
@@ -393,9 +389,6 @@ function StatusIcon({ status }: { status: string }) {
   const iconClass = "h-10 w-10";
   switch (status) {
     case "SUBMITTED": return <FileText className={cn(iconClass, "text-primary")} />;
-    case "ACCEPTED": return <CheckCircle2 className={cn(iconClass, "text-emerald-600")} />;
-    case "REJECTED": return <XCircle className={cn(iconClass, "text-rose-600")} />;
-    case "IN_TRANSIT": return <Truck className={cn(iconClass, "text-amber-600")} />;
     case "ADMITTED": return <Activity className={cn(iconClass, "text-purple-600")} />;
     case "COUNTER_REFERRED": return <ArrowUpRight className={cn(iconClass, "text-slate-600")} />;
     default: return <Clock className={cn(iconClass, "text-muted-foreground")} />;

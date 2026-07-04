@@ -1,0 +1,32 @@
+features 
+editing patient
+view patient history 
+deactivate patient
+showing patient id
+add system admin dashboard for overall
+search and filter patients in each hospital 
+search and filter referrals in each hospital
+search referrals by national id , patient name,
+filter by  status, date
+
+dashboard by spefic hospital and overall dashbaord for system admin
+reports in pdf and excel and printable
+audit logs for admins by hospital and overall for system admin
+add ward type not use static enums
+edit beds count and update beds status 
+
+display and checking target specialist status
+editable transport mode ( private or ambulance)
+referall details page include ward ,specialist
+
+removing other status for specialists other than available and unavailable 
+remove "intransit status" and use  pending status  and mark as pending
+
+make national id required hen creating patient
+
+patient must recieve email after 
+ on steps for creating referral hile selecting hospital ui remove the other details 
+  after selecting selecting target ward  automatically display its respective specialists  without considering their status
+
+if it is urgency referral it should only display available specialist  and make sure that bed 
+

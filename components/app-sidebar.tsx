@@ -69,7 +69,7 @@ const navItems: NavItem[] = [
     icon: Bell,
     module: "notifications",
   },
-  { title: "Reports", href: "/reports", icon: BarChart3, module: "reports" },
+
   {
     title: "Audit Logs",
     href: "/audit-logs",
@@ -92,7 +92,13 @@ export function AppSidebar() {
     (item) =>
       accessibleModules.includes("all") ||
       accessibleModules.includes(item.module),
-  );
+  ).map((item) => {
+    // Route SysAdmin to the system dashboard
+    if (item.module === "dashboard" && role === "SYS_ADMIN") {
+      return { ...item, href: "/dashboard/system" };
+    }
+    return item;
+  });
 
   return (
     <div className="flex h-full w-64 flex-col border-r bg-card">

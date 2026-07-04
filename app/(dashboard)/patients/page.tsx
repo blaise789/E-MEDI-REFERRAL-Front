@@ -22,8 +22,11 @@ import {
   MapPin,
   Clipboard
 } from "lucide-react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { useGetPatientsQuery, useRegisterPatientMutation } from "@/store/features/patient/patientSlice";
+import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useGetPatientsQuery, useRegisterPatientMutation, useDeactivatePatientMutation } from "@/store/features/patient/patientSlice";
 import { format } from "date-fns";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -33,34 +36,34 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function PatientsPage() {
-  const { data: patients, isLoading } = useGetPatientsQuery();
-  const [registerPatient, { isLoading: isRegistering }] = useRegisterPatientMutation();
   const [searchTerm, setSearchTerm] = useState("");
+  const { data: patients, isLoading } = useGetPatientsQuery(searchTerm ? { search: searchTerm } : undefined);
+  const [registerPatient, { isLoading: isRegistering }] = useRegisterPatientMutation();
+  const [deactivatePatient] = useDeactivatePatientMutation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const filteredPatients = patients?.filter(p => 
-    p.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.nationalId?.includes(searchTerm)
-  );
+  const handleDeactivate = async (id: string, name: string) => {
+    if (!confirm(`Deactivate ${name}? They will be hidden from searches.`)) return;
+    try {
+      await deactivatePatient(id).unwrap();
+      toast({ title: "Patient Deactivated" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.data?.message });
+    }
+  };
 
   const formik = useFormik({
     initialValues: {
-      firstName: "",
-      lastName: "",
-      nationalId: "",
-      gender: "",
-      dateOfBirth: "",
-      contactNumber: "",
-      insurance: "",
+      firstName: "", lastName: "", nationalId: "", gender: "",
+      dateOfBirth: "", contactNumber: "", insurance: "",
     },
     validationSchema: Yup.object({
       firstName: Yup.string().required("First name is required"),
       lastName: Yup.string().required("Last name is required"),
       gender: Yup.string().required("Gender is required"),
       dateOfBirth: Yup.date().required("Date of birth is required"),
-      nationalId: Yup.string().optional(),
+      nationalId: Yup.string().required("National ID is required").min(16, "Must be 16 digits"),
     }),
     onSubmit: async (values, { resetForm }) => {
       try {
@@ -110,8 +113,9 @@ export default function PatientsPage() {
 
                <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-2">
-                   <Label>National ID</Label>
-                   <Input id="nationalId" {...formik.getFieldProps("nationalId")} placeholder="Optional" />
+                   <Label>National ID <span className="text-destructive">*</span></Label>
+                  <Input id="nationalId" {...formik.getFieldProps("nationalId")} placeholder="16-digit ID" />
+                  {formik.touched.nationalId && formik.errors.nationalId && <div className="text-xs text-destructive">{formik.errors.nationalId as string}</div>}
                  </div>
                  <div className="space-y-2">
                    <Label>Gender</Label>
@@ -186,10 +190,10 @@ export default function PatientsPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}><TableCell colSpan={6} className="h-12 animate-pulse bg-muted/20" /></TableRow>
                 ))
-              ) : filteredPatients?.length === 0 ? (
+              ) : patients?.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="h-48 text-center text-muted-foreground">No patients found.</TableCell></TableRow>
               ) : (
-                filteredPatients?.map((patient) => (
+                patients?.map((patient) => (
                   <TableRow key={patient.id} className="group hover:bg-muted/30">
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -208,11 +212,23 @@ export default function PatientsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-xs font-bold text-primary/70">{patient.insurance || "N/A"}</TableCell>
-                    <TableCell className="text-right">
-                       <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
-                         View History
-                       </Button>
-                    </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/patients/${patient.id}`}>
+                        <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">View</Button>
+                      </Link>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MapPin className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild><Link href={`/patients/${patient.id}`}>View Profile</Link></DropdownMenuItem>
+                          <DropdownMenuItem asChild><Link href={`/patients/${patient.id}/edit`}>Edit</Link></DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive" onClick={() => handleDeactivate(patient.id, `${patient.firstName} ${patient.lastName}`)}>Deactivate</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
                   </TableRow>
                 ))
               )}

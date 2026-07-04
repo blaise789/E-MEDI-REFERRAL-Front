@@ -24,26 +24,35 @@ import {
   LineChart,
   Line
 } from "recharts";
-import { useGetReferralsQuery } from "@/store/features/referral/referralSlice";
-import { useGetHospitalsQuery } from "@/store/features/hospital/hospitalSlice";
+import { useAuth } from "@/lib/auth-context";
+import { apiSliceV1 } from "@/store/api/apiSliceV1";
 
-const data = [
-  { name: "Mon", referrals: 12, emergency: 4 },
-  { name: "Tue", referrals: 19, emergency: 7 },
-  { name: "Wed", referrals: 15, emergency: 3 },
-  { name: "Thu", referrals: 22, emergency: 8 },
-  { name: "Fri", referrals: 30, emergency: 12 },
-  { name: "Sat", referrals: 10, emergency: 2 },
-  { name: "Sun", referrals: 8, emergency: 1 },
-];
+const hospitalDashboardApi = apiSliceV1.injectEndpoints({
+  endpoints: (builder: any) => ({
+    getHospitalMetrics: builder.query({
+      query: (hospitalId?: string) => hospitalId ? `/reports/metrics?hospitalId=${hospitalId}` : "/reports/metrics",
+      providesTags: ["Dashboard"],
+    }),
+  }),
+});
+
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
-  const { data: referrals, isLoading: loadingReferrals } = useGetReferralsQuery();
-  const { data: hospitals, isLoading: loadingHospitals } = useGetHospitalsQuery();
+  const { user } = useAuth();
+  const router = useRouter();
+  
+  React.useEffect(() => {
+    if (user?.role === "SYS_ADMIN") {
+      router.replace("/dashboard/system");
+    }
+  }, [user, router]);
 
-  const totalReferrals = referrals?.length || 0;
-  const emergencyReferrals = referrals?.filter(r => r.urgency === "EMERGENCY").length || 0;
-  const activeReferrals = referrals?.filter(r => r.status === "IN_TRANSIT" || r.status === "SUBMITTED").length || 0;
+  const { data, isLoading } = hospitalDashboardApi.useGetHospitalMetricsQuery(user?.hospitalId, { skip: !user }) as any;
+
+  if (isLoading || user?.role === "SYS_ADMIN") {
+    return <div className="flex items-center justify-center h-96 text-muted-foreground">Loading dashboard...</div>;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -53,35 +62,27 @@ export default function DashboardPage() {
       />
 
       {/* KPI Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatsCard 
           title="Total Referrals" 
-          value={totalReferrals.toString()} 
+          value={data?.totalReferrals?.toString() ?? "—"} 
           icon={ClipboardList} 
           trend="+12% from last week" 
           trendType="up"
         />
         <StatsCard 
-          title="Emergency Cases" 
-          value={emergencyReferrals.toString()} 
-          icon={AlertCircle} 
-          trend="+5% from last week" 
-          trendColor="text-destructive"
-          trendType="up"
-        />
-        <StatsCard 
-          title="Active Transfers" 
-          value={activeReferrals.toString()} 
+          title="New Requests" 
+          value={data?.submittedReferrals?.toString() ?? "—"} 
           icon={TrendingUp} 
-          trend="Currently in transit" 
+          trend="Awaiting review" 
           trendType="neutral"
         />
         <StatsCard 
-          title="Avg. Acceptance Time" 
-          value="14m" 
+          title="Admitted Cases" 
+          value={data?.admittedReferrals?.toString() ?? "—"} 
           icon={Stethoscope} 
-          trend="-2m from yesterday" 
-          trendType="down"
+          trend="Completed transfers" 
+          trendType="up"
         />
       </div>
 
@@ -92,7 +93,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="h-75">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
+              <BarChart data={data?.referralVolumeData || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} />
@@ -100,8 +101,8 @@ export default function DashboardPage() {
                   cursor={{fill: 'rgba(0,0,0,0.05)'}} 
                   contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
                 />
-                <Bar dataKey="referrals" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="emergency" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="referrals" name="Total Referrals" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="admitted" name="Admitted Cases" fill="#f59e0b" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -109,18 +110,18 @@ export default function DashboardPage() {
 
         <Card className="lg:col-span-3 shadow-sm border-none bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Bed Occupancy Rate</CardTitle>
+            <CardTitle>Bed Occupancy Rate (%)</CardTitle>
           </CardHeader>
           <CardContent className="h-75">
              <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
+              <LineChart data={data?.bedOccupancyData || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 10}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#888', fontSize: 12}} unit="%" />
                 <Tooltip 
                   contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
                 />
-                <Line type="monotone" dataKey="referrals" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="rate" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Occupancy Rate" />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
