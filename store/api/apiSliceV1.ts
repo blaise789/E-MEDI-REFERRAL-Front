@@ -19,7 +19,7 @@ export const apiSliceV1 = createApi({
     "Hospital",
     "Referral",
     "Patient",
-    "BedCapacity",
+    "Ward",
     "Specialist",
     "Notification",
     "AuditLog",

@@ -2,20 +2,34 @@ import type { Role } from "@/lib/types";
 
 // ── Role-based module access ─────────────────────────────────
 export const ROLE_MODULES: Record<string, string[]> = {
-  SYS_ADMIN: ["dashboard", "hospitals", "users", "audit-logs"],
+  SYS_ADMIN: ["dashboard", "hospitals", "users", "audit-logs", "wards"],
   HOSPITAL_ADMIN: [
     "dashboard",
     "referrals",
     "patients",
     "hospitals",
-    "bed-capacity",
+    "wards",
     "specialists",
     "users",
     "notifications",
     "audit-logs",
   ],
-  FOCAL_PERSON: [],
-  CLINICIAN: [],
+  FOCAL_PERSON: [
+    "dashboard",
+    "referrals",
+    "patients",
+    "hospitals",
+    "wards",
+    "specialists",
+    "notifications",
+  ],
+  CLINICIAN: [
+    "dashboard",
+    "referrals",
+    "patients",
+    "wards",
+    "notifications",
+  ],
 };
 
 // ── Action-level permissions ─────────────────────────────────

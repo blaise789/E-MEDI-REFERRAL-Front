@@ -165,91 +165,146 @@ export default function ReferralDetailsPage() {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Left Column: Patient & Clinical */}
         <div className="lg:col-span-2 space-y-8">
-          <Card className="border-none shadow-sm bg-card/60 backdrop-blur-xl ring-1 ring-white/10">
-            <CardHeader className="border-b pb-4">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <User className="h-5 w-5 text-primary" />
-                  Patient Profile
-                </CardTitle>
-                 <div className="flex gap-2">
-                    {(() => {
-                      const urgency = (referral as any).urgency || (referral.isEmergency ? 'EMERGENCY' : 'ROUTINE');
-                      if (urgency === 'EMERGENCY') {
-                        return <Badge className="bg-destructive text-destructive-foreground animate-pulse border-none">EMERGENCY</Badge>;
-                      }
-                      if (urgency === 'URGENT') {
-                        return <Badge className="bg-amber-500 text-white border-none">URGENT</Badge>;
-                      }
-                      return <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">ROUTINE</Badge>;
-                    })()}
-                    <Badge variant="secondary">Case ID: {referral.id.substring(0, 8)}</Badge>
-                 </div>
+          {/* Printable Template Form */}
+          <div className="bg-white border border-slate-300 w-full text-slate-900 font-sans shadow-sm rounded-sm overflow-hidden text-sm">
+            
+            <div className="text-center py-4 border-b border-slate-300 bg-white">
+               <h1 className="text-2xl font-bold tracking-tight text-slate-800">Medical Referral Form</h1>
+               <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-semibold">Case ID: {referral.id.substring(0, 8)}</p>
+            </div>
+
+            {/* Header */}
+            <div className="bg-slate-100/80 border-b border-slate-300 px-3 py-1.5">
+              <h2 className="text-[13px] font-bold text-slate-800">Refer to</h2>
+            </div>
+            {/* Row 1: Hospital & Ward */}
+            <div className="grid grid-cols-2 border-b border-slate-300">
+              <div className="px-3 py-2 border-r border-slate-300 bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Target Hospital:</p>
+                <p className="font-semibold">{referral.receivingHospital?.name || "N/A"}</p>
               </div>
-            </CardHeader>
-            <CardContent className="pt-6 grid md:grid-cols-2 gap-8 font-medium">
-              <div className="space-y-6">
-                <DetailItem label="Full Name" value={`${referral.patient?.firstName} ${referral.patient?.lastName}`} />
-                <DetailItem label="National ID / Gender" value={`${referral.patient?.nationalId || "N/A"} · ${referral.patient?.gender}`} />
-                {referral.patient?.contactNumber && (
-                  <DetailItem label="Contact Number" value={referral.patient.contactNumber} />
-                )}
-                {referral.patient?.email && (
-                  <DetailItem label="Email Address" value={referral.patient.email} />
-                )}
-                {referral.patient && (referral.patient.cell || referral.patient.sector || referral.patient.district) && (
-                  <DetailItem label="Patient Address" value={[referral.patient.cell ? `Cell: ${referral.patient.cell}` : '', referral.patient.sector ? `Sector: ${referral.patient.sector}` : '', referral.patient.district ? `District: ${referral.patient.district}` : ''].filter(Boolean).join(', ')} />
-                )}
-                <DetailItem label="Insurance Provider" value={referral.patient?.insurance || "None / Out-of-pocket"} />
+              <div className="px-3 py-2 bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Target Ward / Specialty:</p>
+                <p className="font-semibold">
+                   {referral.ward ? `${referral.ward.name} (Beds: ${referral.ward.occupiedBeds}/${referral.ward.totalBeds})` : referral.targetWardName || "Unspecified"}
+                </p>
+              </div>
+            </div>
+            {/* Row 2: Assigned Specialist */}
+            <div className="border-b border-slate-300 px-3 py-2 bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Assigned Specialist:</p>
+                <p className="font-semibold">
+                   {referral.assignedSpecialist ? `Dr. ${referral.assignedSpecialist.firstName} ${referral.assignedSpecialist.lastName} (${referral.assignedSpecialist.discipline})` : "None Requested"}
+                </p>
+            </div>
+
+            {/* Header */}
+            <div className="bg-slate-100/80 border-b border-slate-300 px-3 py-1.5 mt-2 border-t">
+              <h2 className="text-[13px] font-bold text-slate-800">Patient information</h2>
+            </div>
+            {/* Row 1 */}
+            <div className="grid grid-cols-3 border-b border-slate-300 bg-white">
+              <div className="px-3 py-2 border-r border-slate-300 col-span-2">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Full Name:</p>
+                <p className="font-semibold">{referral.patient?.firstName} {referral.patient?.lastName}</p>
+              </div>
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">National ID:</p>
+                <p className="font-semibold">{referral.patient?.nationalId || "N/A"}</p>
+              </div>
+            </div>
+            {/* Row 2 */}
+            <div className="grid grid-cols-3 border-b border-slate-300 bg-white">
+              <div className="px-3 py-2 border-r border-slate-300">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Date of Birth / Gender:</p>
+                <p className="font-semibold">{(referral.patient as any)?.dateOfBirth ? new Date((referral.patient as any).dateOfBirth).toLocaleDateString() : 'N/A'} · {referral.patient?.gender}</p>
+              </div>
+              <div className="px-3 py-2 border-r border-slate-300">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Contact Number:</p>
+                <p className="font-semibold">{referral.patient?.contactNumber || "N/A"}</p>
+              </div>
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Email:</p>
+                <p className="font-semibold">{referral.patient?.email || "N/A"}</p>
+              </div>
+            </div>
+            {/* Row 3 */}
+            <div className="border-b border-slate-300 px-3 py-2 bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Address (Cell, Sector, District):</p>
+                <p className="font-semibold">
+                  {[referral.patient?.cell, referral.patient?.sector, referral.patient?.district].filter(Boolean).join(', ') || "N/A"}
+                </p>
+            </div>
+
+            {/* Header */}
+            <div className="bg-slate-100/80 border-b border-slate-300 px-3 py-1.5 mt-2 border-t">
+              <h2 className="text-[13px] font-bold text-slate-800">Clinical & Transfer Information</h2>
+            </div>
+            <div className="border-b border-slate-300 px-3 py-3 min-h-[60px] bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Clinical Diagnosis of referring healthcare practitioner:</p>
+                <p className="font-semibold whitespace-pre-wrap">{referral.diagnosis}</p>
+            </div>
+            <div className="border-b border-slate-300 px-3 py-3 min-h-[60px] bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Reason for Referral:</p>
+                <p className="font-semibold whitespace-pre-wrap">{referral.reasonForTransfer}</p>
+            </div>
+            <div className="border-b border-slate-300 px-3 py-3 min-h-[60px] bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Significant Findings:</p>
+                <p className="font-semibold whitespace-pre-wrap">{(referral as any).significantFindings || "None reported"}</p>
+            </div>
+            <div className="border-b border-slate-300 px-3 py-3 min-h-[60px] bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Procedures & Treatments Received:</p>
+                <p className="font-semibold whitespace-pre-wrap">{(referral as any).proceduresReceived || "None reported"}</p>
+            </div>
+            <div className="border-b border-slate-300 px-3 py-3 min-h-[60px] bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Current Medications:</p>
+                <p className="font-semibold whitespace-pre-wrap">{(referral as any).currentMedications || "None reported"}</p>
+            </div>
+            <div className="grid grid-cols-2 border-b border-slate-300 bg-white">
+              <div className="px-3 py-2 border-r border-slate-300">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Immediate Condition:</p>
+                <p className="font-semibold">{(referral as any).patientCondition || "N/A"}</p>
+              </div>
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Transport Mode & Monitoring:</p>
+                <p className="font-semibold">
+                  {(referral as any).transportType === 'PRIVATE' ? 'Private Vehicle' : 'Ambulance'} 
+                  {((referral as any).monitoringRequired) ? ` - ${(referral as any).monitoringRequired}` : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* Header */}
+            <div className="bg-slate-100/80 border-b border-slate-300 px-3 py-1.5 mt-2 border-t">
+              <h2 className="text-[13px] font-bold text-slate-800">Patient insurance information (if applicable)</h2>
+            </div>
+            <div className="border-b border-slate-300 px-3 py-2 bg-white">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Insurance carrier:</p>
+                <p className="font-semibold">{referral.patient?.insurance || "None / Out-of-pocket"}</p>
+            </div>
+
+            {/* Header */}
+            <div className="bg-slate-100/80 border-b border-slate-300 px-3 py-1.5 mt-2 border-t">
+              <h2 className="text-[13px] font-bold text-slate-800">Referring clinician information</h2>
+            </div>
+            <div className="grid grid-cols-2 bg-white">
+              <div className="px-3 py-2 border-r border-slate-300">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Initiated By (Name & Role):</p>
+                <p className="font-semibold">
+                  {referral.initiatedBy?.firstName} {referral.initiatedBy?.lastName} ({referral.initiatedBy?.role.replace("_", " ")})
+                </p>
                 {(referral as any).referringDoctorName && (
-                  <DetailItem label="Referring Clinician / Doctor" value={`${(referral as any).referringDoctorName}${(referral as any).referringDoctorContact ? ` (${(referral as any).referringDoctorContact})` : ''}`} />
-                )}
-                <DetailItem label="Initiated By" value={`${referral.initiatedBy?.firstName} ${referral.initiatedBy?.lastName} (${referral.initiatedBy?.role.replace("_", " ")})`} />
-              </div>
-              <div className="space-y-6">
-                <DetailItem label="Clinical Diagnosis" value={referral.diagnosis} />
-                {(referral as any).expectedAdmissionDate && (
-                  <DetailItem 
-                    label="Expected Admission Date" 
-                    value={new Date((referral as any).expectedAdmissionDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })} 
-                  />
-                )}
-                {(referral as any).significantFindings && (
-                  <DetailItem label="Significant Findings" value={(referral as any).significantFindings} />
-                )}
-                {(referral as any).proceduresReceived && (
-                  <DetailItem label="Procedures & Treatments Received" value={(referral as any).proceduresReceived} />
-                )}
-                {(referral as any).currentMedications && (
-                  <DetailItem label="Current Medications" value={(referral as any).currentMedications} />
-                )}
-                {(referral as any).patientCondition && (
-                  <DetailItem label="Immediate Condition" value={(referral as any).patientCondition} />
-                )}
-                <DetailItem label="Reason for Transfer" value={referral.reasonForTransfer} />
-                {(referral as any).monitoringRequired && (
-                  <DetailItem label="Transport Monitoring" value={(referral as any).monitoringRequired} />
-                )}
-                <DetailItem 
-                  label="Transport Mode" 
-                  value={(referral as any).transportType === 'PRIVATE' ? '🚗 Private Vehicle' : '🚑 Ambulance'} 
-                />
-                {referral.targetWardType && (
-                  <DetailItem label="Target Ward" value={referral.targetWardType.replace(/_/g, ' ')} />
-                )}
-                {(referral as any).targetSpecialist && (
-                  <DetailItem 
-                    label="Assigned Specialist" 
-                    value={`Dr. ${(referral as any).targetSpecialist.firstName} ${(referral as any).targetSpecialist.lastName} — ${(referral as any).targetSpecialist.discipline?.replace(/_/g, ' ')}`}
-                  />
+                  <p className="text-[11px] text-slate-500 mt-1 font-medium italic">Referring Doctor: {(referral as any).referringDoctorName}</p>
                 )}
               </div>
-            </CardContent>
-          </Card>
+              <div className="px-3 py-2">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase mb-0.5">Origin Hospital:</p>
+                <p className="font-semibold">{referral.referringHospital?.name || "N/A"}</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 font-medium">{referral.referringHospital?.location}</p>
+              </div>
+            </div>
+          </div>
+          {/* End Printable Template Form */}
 
           <Card className="border-none shadow-sm bg-card/60 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden">
             <CardHeader className="border-b pb-4 bg-muted/30">

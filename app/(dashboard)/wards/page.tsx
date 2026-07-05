@@ -28,11 +28,10 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   useGetHospitalsQuery,
-  useUpdateBedCapacityMutation,
-  useAddBedCapacityMutation,
-  useRecalibrateBedCapacityMutation,
+  useUpdateWardOccupancyMutation,
+  useAddWardMutation,
+  useRecalibrateWardMutation,
 } from "@/store/features/hospital/hospitalSlice";
-import { WARD_TYPE_LABELS, WardType } from "@/lib/types";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useSocket } from "@/lib/socket-context";
@@ -62,23 +61,23 @@ export default function BedCapacityPage() {
   const { isConnected } = useSocket();
   console.log(isConnected)
 
-  const [updateCapacity, { isLoading: isUpdating }] = useUpdateBedCapacityMutation();
-  const [addWard, { isLoading: isAdding }] = useAddBedCapacityMutation();
-  const [recalibrate, { isLoading: isRecalibrating }] = useRecalibrateBedCapacityMutation();
+  const [updateCapacity, { isLoading: isUpdating }] = useUpdateWardOccupancyMutation();
+  const [addWard, { isLoading: isAdding }] = useAddWardMutation();
+  const [recalibrate, { isLoading: isRecalibrating }] = useRecalibrateWardMutation();
 
   const myHospitalId = user?.hospitalId;
   const isHospitalStaff = user?.role !== "SYS_ADMIN";
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newWard, setNewWard] = useState({
-    wardType: "GENERAL_MEDICAL" as WardType,
+    name: "General Ward",
     totalBeds: 10,
   });
 
   const allBeds =
     hospitals?.flatMap((h) => {
       if (isHospitalStaff && h.id !== myHospitalId) return [];
-      return h.beds?.map((b) => ({ ...b, hospitalName: h.name })) || [];
+      return h.wards?.map((b: any) => ({ ...b, hospitalName: h.name })) || [];
     }) || [];
 
   const handleUpdate = async (
@@ -120,10 +119,7 @@ export default function BedCapacityPage() {
     }
   };
 
-  const existingWardTypes = allBeds.map((b) => b.wardType);
-  const availableWardTypes = Object.entries(WARD_TYPE_LABELS).filter(
-    ([key]) => !existingWardTypes.includes(key as any),
-  );
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -152,7 +148,6 @@ export default function BedCapacityPage() {
                 <DialogTrigger asChild>
                   <Button
                     className="gap-2 shadow-lg"
-                    disabled={availableWardTypes.length === 0}
                   >
                     <Plus className="h-4 w-4" />
                     Add Ward
@@ -162,27 +157,15 @@ export default function BedCapacityPage() {
                   <DialogHeader>
                     <DialogTitle>Register New Ward</DialogTitle>
                   </DialogHeader>
-                  {availableWardTypes.length > 0 ? (
                     <div className="grid gap-4 py-4">
                       <div className="space-y-2">
-                        <Label>Ward Type</Label>
-                        <Select
-                          value={newWard.wardType}
-                          onValueChange={(v) =>
-                            setNewWard({ ...newWard, wardType: v as WardType })
-                          }
-                        >
-                          <SelectTrigger className="h-12 bg-muted/50 border-none ring-1 ring-border/50">
-                            <SelectValue placeholder="Select ward type..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableWardTypes.map(([key, label]) => (
-                              <SelectItem key={key} value={key}>
-                                {label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label>Ward Name</Label>
+                        <Input
+                          value={newWard.name}
+                          onChange={(e) => setNewWard({ ...newWard, name: e.target.value })}
+                          placeholder="e.g. ICU A"
+                          className="h-12 bg-muted/50 border-none ring-1 ring-border/50"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Total Bed Count</Label>
@@ -199,16 +182,6 @@ export default function BedCapacityPage() {
                         />
                       </div>
                     </div>
-                  ) : (
-                    <div className="py-8 text-center space-y-2">
-                      <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
-                        <Settings2 className="h-6 w-6 text-amber-600" />
-                      </div>
-                      <p className="text-sm font-medium">
-                        All ward types are already configured for your facility.
-                      </p>
-                    </div>
-                  )}
                   <DialogFooter>
                     <Button
                       variant="ghost"
@@ -216,16 +189,14 @@ export default function BedCapacityPage() {
                     >
                       Cancel
                     </Button>
-                    {availableWardTypes.length > 0 && (
-                      <Button onClick={handleAddWard} disabled={isAdding}>
-                        {isAdding ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        ) : (
-                          <Plus className="h-4 w-4 mr-2" />
-                        )}
-                        Confirm Ward
-                      </Button>
-                    )}
+                    <Button onClick={handleAddWard} disabled={isAdding || !newWard.name}>
+                      {isAdding ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      Confirm Ward
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -256,7 +227,7 @@ export default function BedCapacityPage() {
         <SummaryCard
           title="Critical (ICU)"
           value={allBeds
-            .filter((b) => b.wardType === "ICU")
+            .filter((b: any) => b.name?.includes("ICU"))
             .reduce((acc, b) => acc + (b.totalBeds - b.occupiedBeds), 0)}
           sub="Available ICU beds"
           variant="warning"
@@ -325,7 +296,7 @@ export default function BedCapacityPage() {
                           <div className="flex items-center gap-2">
                             <BedDouble className="h-4 w-4 text-muted-foreground" />
                             <span className="font-semibold">
-                              {WARD_TYPE_LABELS[bed.wardType as WardType]}
+                              {bed.name}
                             </span>
                           </div>
                         </div>
@@ -486,7 +457,7 @@ function RecalibrateDialog({ bed, onRecalibrate }: { bed: any, onRecalibrate: (v
         <DialogHeader>
           <DialogTitle>Administrative Overload</DialogTitle>
           <DialogDescription>
-            Manually force the occupied bed count for <strong>{bed.wardType.replace("_", " ")}</strong>.
+            Manually force the occupied bed count for <strong>{bed.name}</strong>.
             Use this only to resolve discrepancies between data and reality.
           </DialogDescription>
         </DialogHeader>

@@ -21,7 +21,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
-import { WARD_TYPE_LABELS, WardType, SPECIALIST_DISCIPLINE_LABELS, SpecialistDiscipline } from "@/lib/types";
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -34,7 +33,7 @@ import {
 } from "lucide-react";
 import { useGetHospitalsQuery } from "@/store/features/hospital/hospitalSlice";
 import { useGetPatientsQuery, useRegisterPatientMutation } from "@/store/features/patient/patientSlice";
-import { useCreateReferralMutation } from "@/store/features/referral/referralSlice";
+import { useCreateReferralMutation, useLazyGetHospitalRecommendationsQuery } from "@/store/features/referral/referralSlice";
 import { FormError } from "@/components/ui/form-error";
 
 const STEPS = [
@@ -67,6 +66,7 @@ const validationSchemas = [
   }, [["patientId", "newPatient"]]),
   // Step 1: Facility
   Yup.object().shape({
+    targetWardName: Yup.string().required("Please specify the required service or ward"),
     receivingHospitalId: Yup.string().required("Please select a receiving facility"),
     referringHospitalId: Yup.string().required("Please select a referring hospital"),
   }),
@@ -87,12 +87,14 @@ export default function CreateReferralPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
+  const [showAllHospitals, setShowAllHospitals] = useState(false);
   
   const { user } = useAuth();
   
   // Data Queries
   const { data: hospitals, isLoading: isLoadingHospitals } = useGetHospitalsQuery();
   const { data: patients, isLoading: isLoadingPatients } = useGetPatientsQuery();
+  const [getRecommendations, { data: recommendations, isFetching: isRecommending }] = useLazyGetHospitalRecommendationsQuery();
   const [createReferral] = useCreateReferralMutation();
   const [registerPatient] = useRegisterPatientMutation();
 
@@ -101,8 +103,8 @@ export default function CreateReferralPage() {
       patientId: "",
       referringHospitalId: user?.hospitalId || "", // Default to user's hospital if assigned
       receivingHospitalId: "",
-      targetWardType: undefined as string | undefined,
-      targetSpecialistId: undefined as string | undefined,
+      targetWardName: undefined as string | undefined,
+      assignedSpecialistId: undefined as string | undefined,
       reasonForTransfer: "",
       diagnosis: "",
       preTransferTreatment: "",
@@ -156,8 +158,8 @@ export default function CreateReferralPage() {
           patientId,
           referringHospitalId: values.referringHospitalId,
           receivingHospitalId: values.receivingHospitalId,
-          targetWardType: values.targetWardType,
-          targetSpecialistId: values.targetSpecialistId,
+          targetWardName: values.targetWardName,
+          assignedSpecialistId: values.assignedSpecialistId || undefined,
           reasonForTransfer: values.reasonForTransfer,
           diagnosis: values.diagnosis,
           preTransferTreatment: values.preTransferTreatment,
@@ -231,21 +233,11 @@ export default function CreateReferralPage() {
   const selectedReceivingHospital = hospitals?.find(h => h.id === formik.values.receivingHospitalId);
   const selectedPatient = patients?.find(p => p.id === formik.values.patientId);
 
-  // Filter specialists by selected ward type: map ward to specialist discipline
-  const WARD_SPECIALIST_MAP: Record<string, string[]> = {
-    GENERAL_MEDICAL: ["INTERNAL_MEDICINE", "NEUROLOGY"],
-    SURGICAL: ["GENERAL_SURGERY", "ORTHOPEDIC_SURGERY", "ANESTHESIA"],
-    ICU: ["INTENSIVE_CARE", "ANESTHESIA"],
-    HDU: ["INTENSIVE_CARE", "NEUROLOGY"],
-    MATERNITY: ["OBSTETRICS_GYNECOLOGY"],
-    PEDIATRIC: ["PEDIATRICS"],
-  };
+  // Extract unique ward names
+  const uniqueWardNames = Array.from(new Set(
+    hospitals?.flatMap(h => h.wards?.map(w => w.name) || []) || []
+  )).sort();
 
-  const wardSpecialists = selectedReceivingHospital?.specialists?.filter(s => {
-    if (!formik.values.targetWardType) return true;
-    const allowedDisciplines = WARD_SPECIALIST_MAP[formik.values.targetWardType] || [];
-    return allowedDisciplines.includes(s.discipline);
-  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -372,6 +364,23 @@ export default function CreateReferralPage() {
                      <FormError message={formik.touched.newPatient?.dateOfBirth && (formik.errors.newPatient as any)?.dateOfBirth} />
                   </div>
                   <div className="space-y-2">
+                     <Label>Gender</Label>
+                     <Select 
+                       disabled={!!formik.values.patientId} 
+                       value={formik.values.newPatient.gender} 
+                       onValueChange={(val) => formik.setFieldValue("newPatient.gender", val)}
+                     >
+                       <SelectTrigger className="bg-background/50 border-none ring-1 ring-border/50">
+                         <SelectValue placeholder="Select Gender" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="MALE">Male</SelectItem>
+                         <SelectItem value="FEMALE">Female</SelectItem>
+                       </SelectContent>
+                     </Select>
+                     <FormError message={formik.touched.newPatient?.gender && (formik.errors.newPatient as any)?.gender} />
+                  </div>
+                  <div className="space-y-2">
                      <Label>Insurance Provider</Label>
                      <Input 
                        name="newPatient.insurance"
@@ -475,91 +484,139 @@ export default function CreateReferralPage() {
               )}
 
               {/* Receiving Hospital */}
-              <div className="space-y-4">
-                 <Label className="text-sm font-semibold text-primary/80 uppercase tracking-wider">Receiving Hospital (Destination)</Label>
-                  <div className="grid gap-3">
-                    {hospitals?.filter(h => h.id !== formik.values.referringHospitalId).map(hospital => (
-                      <div 
-                        key={hospital.id} 
+              <div className="space-y-6">
+                 <div className="space-y-4 bg-primary/5 p-4 rounded-xl border border-primary/10">
+                   <Label className="text-sm font-semibold text-primary/80 uppercase tracking-wider">Service Requested (Target Ward)</Label>
+                   <div className="flex gap-2">
+                     <Input 
+                        list="ward-names"
+                        placeholder="e.g. Surgery, ICU, Maternity..."
+                        value={formik.values.targetWardName || ""}
+                        onChange={(e) => formik.setFieldValue("targetWardName", e.target.value)}
+                        className="bg-background border-primary/20 h-12"
+                     />
+                     <datalist id="ward-names">
+                       {uniqueWardNames.map((name, i) => (
+                         <option key={i} value={name} />
+                       ))}
+                     </datalist>
+                     <Button 
+                        type="button" 
+                        className="h-12 px-6 shadow-sm"
+                        disabled={!formik.values.targetWardName || isRecommending}
                         onClick={() => {
-                          formik.setFieldValue("receivingHospitalId", hospital.id);
-                          formik.setFieldValue("targetWardType", undefined);
-                          formik.setFieldValue("targetSpecialistId", undefined);
+                          getRecommendations(formik.values.targetWardName || "");
+                          setShowAllHospitals(false);
                         }}
-                        className={cn(
-                          "cursor-pointer p-4 rounded-xl border-2 transition-all flex items-center gap-4",
-                          formik.values.receivingHospitalId === hospital.id ? "border-primary bg-primary/5 shadow-inner" : "border-transparent bg-muted/30 hover:bg-muted/50"
-                        )}
-                      >
-                        <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center text-primary border shadow-sm shrink-0">
-                          <HospitalIcon className="h-5 w-5" />
-                        </div>
-                        <div className="flex flex-col flex-1">
-                          <span className="font-semibold text-sm">{hospital.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{hospital.level.replace("_", " ")} · {hospital.location}</span>
-                        </div>
-                        {formik.values.receivingHospitalId === hospital.id && <ClipboardCheck className="h-4 w-4 text-primary shrink-0" />}
-                      </div>
-                    ))}
+                     >
+                        {isRecommending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Recommend"}
+                     </Button>
+                   </div>
+                   <FormError message={formik.touched.targetWardName && formik.errors.targetWardName as string} />
+                 </div>
+
+                 <div className="flex items-center justify-between mt-6 mb-2">
+                   <Label className="text-sm font-semibold text-primary/80 uppercase tracking-wider">Receiving Hospital (Destination)</Label>
+                   {recommendations && (
+                     <Button type="button" variant="link" onClick={() => setShowAllHospitals(!showAllHospitals)} className="h-auto p-0 text-xs">
+                       {showAllHospitals ? "Show Recommendations Only" : "Show All Facilities"}
+                     </Button>
+                   )}
+                 </div>
+                 
+                 <div className="grid gap-3 max-h-80 overflow-y-auto pr-2">
+                   {!recommendations || showAllHospitals ? (
+                     // Show all hospitals
+                     hospitals?.filter(h => h.id !== formik.values.referringHospitalId).map(hospital => (
+                       <div 
+                         key={hospital.id} 
+                         onClick={() => formik.setFieldValue("receivingHospitalId", hospital.id)}
+                         className={cn(
+                           "cursor-pointer p-4 rounded-xl border-2 transition-all flex items-center gap-4",
+                           formik.values.receivingHospitalId === hospital.id ? "border-primary bg-primary/5 shadow-inner" : "border-transparent bg-muted/30 hover:bg-muted/50"
+                         )}
+                       >
+                         <div className="h-10 w-10 rounded-lg bg-background flex items-center justify-center text-primary border shadow-sm shrink-0">
+                           <HospitalIcon className="h-5 w-5" />
+                         </div>
+                         <div className="flex flex-col flex-1">
+                           <span className="font-semibold text-sm">{hospital.name}</span>
+                           <span className="text-[10px] text-muted-foreground">{hospital.level.replace("_", " ")} · {hospital.location}</span>
+                         </div>
+                         {formik.values.receivingHospitalId === hospital.id && <ClipboardCheck className="h-4 w-4 text-primary shrink-0" />}
+                       </div>
+                     ))
+                   ) : (
+                     // Show recommendations
+                     recommendations.length > 0 ? (
+                       recommendations.map((rec, index) => (
+                         <div 
+                           key={rec.hospitalId} 
+                           onClick={() => formik.setFieldValue("receivingHospitalId", rec.hospitalId)}
+                           className={cn(
+                             "cursor-pointer p-4 rounded-xl border-2 transition-all flex items-center gap-4 relative overflow-hidden",
+                             formik.values.receivingHospitalId === rec.hospitalId ? "border-primary bg-primary/5 shadow-inner" : "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10"
+                           )}
+                         >
+                           {index === 0 && (
+                             <div className="absolute -right-6 top-3 bg-emerald-500 text-white text-[9px] font-bold uppercase tracking-wider py-1 px-8 rotate-45 shadow-sm">
+                               Best Match
+                             </div>
+                           )}
+                           <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-sm shrink-0">
+                             <span className="font-bold">{rec.score}</span>
+                           </div>
+                           <div className="flex flex-col flex-1">
+                             <span className="font-semibold text-sm">{rec.hospitalName}</span>
+                             <div className="flex items-center gap-2 mt-1">
+                               <Badge variant="outline" className="text-[9px] bg-white border-emerald-200 text-emerald-700">{rec.availableBeds} free beds</Badge>
+                               <Badge variant="outline" className="text-[9px] bg-white border-indigo-200 text-indigo-700">{rec.activeSpecialistsCount} active staff</Badge>
+                             </div>
+                           </div>
+                           {formik.values.receivingHospitalId === rec.hospitalId && <ClipboardCheck className="h-5 w-5 text-emerald-600 shrink-0 mr-4" />}
+                         </div>
+                       ))
+                     ) : (
+                       <div className="text-center p-8 bg-muted/30 rounded-xl border border-dashed">
+                         <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                         <p className="text-sm font-medium">No hospitals found matching this service.</p>
+                         <p className="text-xs text-muted-foreground mt-1">Try another service or show all facilities.</p>
+                       </div>
+                     )
+                   )}
                   </div>
-                  <FormError message={formik.touched.receivingHospitalId && formik.errors.receivingHospitalId} />
+
+                 {formik.values.receivingHospitalId && (
+                   <div className="space-y-4 pt-4 border-t">
+                     <Label className="text-sm font-semibold text-primary/80 uppercase tracking-wider">Assigned Specialist (Optional)</Label>
+                     <Select 
+                       value={formik.values.assignedSpecialistId || "none"} 
+                       onValueChange={(val) => formik.setFieldValue("assignedSpecialistId", val === "none" ? undefined : val)}
+                     >
+                       <SelectTrigger className="bg-background/50 border-none ring-1 ring-border/50 h-12">
+                         <SelectValue placeholder="Select a specialist (optional)..." />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="none">No specific specialist</SelectItem>
+                         {selectedReceivingHospital?.specialists?.filter(s => s.status !== "UNAVAILABLE").map(spec => (
+                           <SelectItem key={spec.id} value={spec.id}>
+                             Dr. {spec.firstName} {spec.lastName} ({spec.discipline})
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                     <p className="text-xs text-muted-foreground">
+                       You can request a specific specialist, but the receiving hospital may re-assign based on live availability.
+                     </p>
+                   </div>
+                 )}
+
                 </div>
               </div>
           )}
 
           {currentStep === 2 && (
             <div className="grid gap-6 animate-in slide-in-from-right-4 duration-300">
-
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                    <Label>Target Ward (Optional)</Label>
-                    <Select 
-                      value={formik.values.targetWardType || "NONE"} 
-                      onValueChange={(val) => {
-                        const ward = val === "NONE" ? undefined : val;
-                        formik.setFieldValue("targetWardType", ward);
-                        formik.setFieldValue("targetSpecialistId", undefined); // reset specialist on ward change
-                      }}
-                    >
-                      <SelectTrigger className="bg-background/50 border-none ring-1 ring-border/50 h-12">
-                         <SelectValue placeholder="Any ward type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                         <SelectItem value="NONE">Any Ward / Auto-assign</SelectItem>
-                         {selectedReceivingHospital?.beds?.map(b => (
-                           <SelectItem key={b.wardType} value={b.wardType}>
-                             {WARD_TYPE_LABELS[b.wardType as WardType] || b.wardType} - ({b.totalBeds - b.occupiedBeds} free)
-                           </SelectItem>
-                         ))}
-                      </SelectContent>
-                    </Select>
-                 </div>
-                 <div className="space-y-2">
-                    <Label>Target Specialist (Optional)</Label>
-                    <Select 
-                      value={formik.values.targetSpecialistId || "NONE"} 
-                      onValueChange={(val) => formik.setFieldValue("targetSpecialistId", val === "NONE" ? undefined : val)}
-                    >
-                      <SelectTrigger className="bg-background/50 border-none ring-1 ring-border/50 h-12">
-                         <SelectValue placeholder="Any specialist" />
-                      </SelectTrigger>
-                      <SelectContent>
-                         <SelectItem value="NONE">Any Specialist / Auto-assign</SelectItem>
-                         {wardSpecialists?.map(s => (
-                           <SelectItem key={s.id} value={s.id}>
-                             Dr. {s.lastName} {s.firstName} — {SPECIALIST_DISCIPLINE_LABELS[s.discipline as SpecialistDiscipline] || s.discipline}
-                             {s.status === 'UNAVAILABLE' && ' (Unavailable)'}
-                           </SelectItem>
-                         ))}
-                         {wardSpecialists?.length === 0 && (
-                           <div className="p-2 text-xs text-muted-foreground text-center">
-                             'No available specialists at this facility.'
-                           </div>
-                         )}
-                      </SelectContent>
-                    </Select>
-                 </div>
-               </div>
 
                 <div className="space-y-2">
                    <Label>Urgency Level</Label>
@@ -610,9 +667,21 @@ export default function CreateReferralPage() {
                  </div>
 
                 {formik.values.isEmergency && (() => {
-                  const hasAvailableSpecialist = selectedReceivingHospital?.specialists?.some(s => s.status === "AVAILABLE");
-                  const selectedWardType = formik.values.targetWardType;
-                  const matchingWards = selectedReceivingHospital?.beds?.filter(b => !selectedWardType || b.wardType === selectedWardType) || [];
+                  const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+                  const currentDay = dayNames[new Date().getDay()];
+                  const currentHour = new Date().toTimeString().substring(0, 5);
+                  
+                  const hasAvailableSpecialist = selectedReceivingHospital?.specialists?.some(s => {
+                    if (s.status === 'UNAVAILABLE') return false;
+                    if (s.workingDays.length > 0 && !s.workingDays.includes(currentDay)) return false;
+                    if (s.shiftStartTime && s.shiftEndTime) {
+                      return currentHour >= s.shiftStartTime && currentHour <= s.shiftEndTime;
+                    }
+                    return s.status === 'AVAILABLE';
+                  });
+                  
+                  const selectedWardName = formik.values.targetWardName;
+                  const matchingWards = selectedReceivingHospital?.wards?.filter(b => !selectedWardName || b.name === selectedWardName) || [];
                   const hasFreeBed = matchingWards.some(b => b.totalBeds - b.occupiedBeds > 0);
 
                   if (!hasAvailableSpecialist || !hasFreeBed) {
@@ -626,7 +695,7 @@ export default function CreateReferralPage() {
                             <li>No available specialists/surgeons at the receiving hospital.</li>
                           )}
                           {!hasFreeBed && (
-                            <li>No available beds in the {selectedWardType ? `${selectedWardType.replace("_", " ")} ward` : "receiving hospital"}.</li>
+                            <li>No available beds in the {selectedWardName ? `${selectedWardName} ward` : "receiving hospital"}.</li>
                           )}
                         </ul>
                         <p className="text-[11px] font-medium pt-1">
@@ -841,18 +910,7 @@ export default function CreateReferralPage() {
                     <div className="space-y-2">
                        <div className="text-sm border-b pb-2 flex justify-between">
                          <span className="text-muted-foreground">Target Ward:</span>
-                         <span className="font-medium text-right ml-2">{formik.values.targetWardType ? WARD_TYPE_LABELS[formik.values.targetWardType as WardType] || formik.values.targetWardType : "Any / Not specified"}</span>
-                       </div>
-                       <div className="text-sm border-b pb-2 flex justify-between">
-                         <span className="text-muted-foreground">Required Specialist:</span>
-                         <span className="font-medium text-right ml-2">
-                           {formik.values.targetSpecialistId 
-                             ? (() => {
-                               const spec = selectedReceivingHospital?.specialists?.find(s => s.id === formik.values.targetSpecialistId);
-                               return spec ? `Dr. ${spec.lastName} (${SPECIALIST_DISCIPLINE_LABELS[spec.discipline as SpecialistDiscipline] || spec.discipline})` : "Dr. Selected";
-                               })() 
-                             : "Any / Not specified"}
-                         </span>
+                         <span className="font-medium text-right ml-2">{formik.values.targetWardName || "Any / Not specified"}</span>
                        </div>
                        <div className="text-sm border-b pb-2 flex justify-between gap-10">
                          <span className="text-muted-foreground">Diagnosis:</span>

@@ -10,23 +10,7 @@ export type Role =
 
 export type HospitalLevel = "DISTRICT" | "REFERRAL";
 
-export type WardType =
-  | "GENERAL_MEDICAL"
-  | "SURGICAL"
-  | "ICU"
-  | "HDU"
-  | "MATERNITY"
-  | "PEDIATRIC";
 
-export type SpecialistDiscipline =
-  | "GENERAL_SURGERY"
-  | "ORTHOPEDIC_SURGERY"
-  | "OBSTETRICS_GYNECOLOGY"
-  | "INTERNAL_MEDICINE"
-  | "PEDIATRICS"
-  | "NEUROLOGY"
-  | "ANESTHESIA"
-  | "INTENSIVE_CARE";
 
 export type SpecialistStatus =
   | "AVAILABLE"
@@ -60,7 +44,7 @@ export interface Hospital {
   level: HospitalLevel;
   location: string;
   contactNumber: string | null;
-  beds?: BedCapacity[];
+  wards?: Ward[];
   specialists?: Specialist[];
   createdAt: string;
   updatedAt: string;
@@ -81,13 +65,14 @@ export interface User {
   updatedAt: string;
 }
 
-export interface BedCapacity {
+export interface Ward {
   id: string;
-  wardType: WardType;
+  name: string;
   totalBeds: number;
   occupiedBeds: number;
   hospitalId: string;
   hospital?: Hospital;
+  specialists?: Specialist[];
   updatedAt: string;
 }
 
@@ -95,7 +80,12 @@ export interface Specialist {
   id: string;
   firstName: string;
   lastName: string;
-  discipline: SpecialistDiscipline;
+  discipline: string;
+  wardId: string;
+  ward?: Ward;
+  shiftStartTime?: string | null;
+  shiftEndTime?: string | null;
+  workingDays: string[];
   status: SpecialistStatus;
   hospitalId: string;
   hospital?: Hospital;
@@ -156,9 +146,11 @@ export interface Referral {
   diagnosis: string;
   preTransferTreatment: string | null;
   transportType: 'AMBULANCE' | 'PRIVATE' | null;
-  targetWardType?: string | null;
-  targetSpecialistId?: string | null;
-  targetSpecialist?: Specialist | null;
+  targetWardName?: string | null;
+  wardId?: string | null;
+  ward?: { id: string; name: string; totalBeds: number; occupiedBeds: number } | null;
+  assignedSpecialistId?: string | null;
+  assignedSpecialist?: { id: string; firstName: string; lastName: string; discipline: string } | null;
   counterReferral?: CounterReferral;
   logs?: AuditLog[];
   significantFindings?: string | null;
@@ -236,8 +228,7 @@ export interface CreateReferralRequest {
   patientId: string;
   referringHospitalId: string;
   receivingHospitalId: string;
-  targetWardType?: string;
-  targetSpecialistId?: string;
+  targetWardName?: string;
   reasonForTransfer: string;
   diagnosis: string;
   preTransferTreatment?: string | null;
@@ -291,25 +282,7 @@ export interface UpdateSpecialistStatusRequest {
 // ============================================================
 
 /** Human-readable label maps for display in tables/badges */
-export const WARD_TYPE_LABELS: Record<WardType, string> = {
-  GENERAL_MEDICAL: "General Medical",
-  SURGICAL: "Surgical",
-  ICU: "ICU",
-  HDU: "HDU",
-  MATERNITY: "Maternity",
-  PEDIATRIC: "Pediatric",
-};
 
-export const SPECIALIST_DISCIPLINE_LABELS: Record<SpecialistDiscipline, string> = {
-  GENERAL_SURGERY: "General Surgery",
-  ORTHOPEDIC_SURGERY: "Orthopedic Surgery",
-  OBSTETRICS_GYNECOLOGY: "Obstetrics & Gynecology",
-  INTERNAL_MEDICINE: "Internal Medicine",
-  PEDIATRICS: "Pediatrics",
-  NEUROLOGY: "Neurology",
-  ANESTHESIA: "Anesthesia",
-  INTENSIVE_CARE: "Intensive Care",
-};
 
 export const ROLE_LABELS: Record<string, string> = {
   HOSPITAL_ADMIN: "Hospital Admin",

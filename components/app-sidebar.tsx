@@ -52,10 +52,10 @@ const navItems: NavItem[] = [
     module: "hospitals",
   },
   {
-    title: "Bed Capacity",
-    href: "/bed-capacity",
+    title: "Wards",
+    href: "/wards",
     icon: BedDouble,
-    module: "bed-capacity",
+    module: "wards",
   },
   {
     title: "Specialists",

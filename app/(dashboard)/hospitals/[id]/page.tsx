@@ -27,7 +27,7 @@ import {
   useGetHospitalDashboardQuery
 } from "@/store/features/hospital/hospitalSlice";
 import { cn } from "@/lib/utils";
-import { WARD_TYPE_LABELS, WardType, SPECIALIST_DISCIPLINE_LABELS, SpecialistDiscipline } from "@/lib/types";
+
 
 export default function HospitalDetailsPage({
   params,
@@ -147,7 +147,7 @@ export default function HospitalDetailsPage({
                     return (
                       <TableRow key={bed.id}>
                         <TableCell className="font-medium">
-                          {WARD_TYPE_LABELS[bed.wardType as WardType] || bed.wardType}
+                          {bed.name}
                         </TableCell>
                         <TableCell className="w-1/2">
                           <div className="flex items-center gap-3">
@@ -189,7 +189,7 @@ export default function HospitalDetailsPage({
               <TableHeader>
                 <TableRow>
                   <TableHead>Doctor</TableHead>
-                  <TableHead>Discipline</TableHead>
+                  <TableHead>Ward</TableHead>
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -214,7 +214,7 @@ export default function HospitalDetailsPage({
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {SPECIALIST_DISCIPLINE_LABELS[doc.discipline as SpecialistDiscipline] || doc.discipline}
+                        {doc.wardId ? beds?.find((b: any) => b.id === doc.wardId)?.name || 'Unknown' : 'Unassigned'}
                       </TableCell>
                       <TableCell className="text-right">
                         <StatusBadge status={doc.status} />

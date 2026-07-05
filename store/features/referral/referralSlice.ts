@@ -25,6 +25,9 @@ export const referralApi = apiSliceV1.injectEndpoints({
       query: (id) => `referrals/${id}`,
       providesTags: (result, error, id) => [{ type: "Referral", id }],
     }),
+    getHospitalRecommendations: builder.query<any[], string>({
+      query: (targetWardName) => `referrals/recommendations?targetWardName=${encodeURIComponent(targetWardName)}`,
+    }),
     createReferral: builder.mutation<Referral, CreateReferralRequest>({
       query: (data) => ({
         url: "referrals",
@@ -54,7 +57,8 @@ export const referralApi = apiSliceV1.injectEndpoints({
 
 export const { 
   useGetReferralsQuery, 
-  useGetReferralByIdQuery, 
+  useGetReferralByIdQuery,
+  useLazyGetHospitalRecommendationsQuery,
   useCreateReferralMutation,
   useUpdateReferralStatusMutation,
   useAddCounterReferralMutation,
