@@ -25,6 +25,9 @@ const validationSchema = Yup.object().shape({
   insurance: Yup.string().nullable(),
   contactNumber: Yup.string().nullable(),
   email: Yup.string().email("Invalid email").nullable(),
+  cell: Yup.string().nullable(),
+  sector: Yup.string().nullable(),
+  district: Yup.string().nullable(),
 });
 
 export default function EditPatientPage() {
@@ -44,6 +47,9 @@ export default function EditPatientPage() {
       insurance: patient?.insurance || "",
       contactNumber: (patient as any)?.contactNumber || "",
       email: (patient as any)?.email || "",
+      cell: (patient as any)?.cell || "",
+      sector: (patient as any)?.sector || "",
+      district: (patient as any)?.district || "",
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
@@ -135,8 +141,29 @@ export default function EditPatientPage() {
           <div className="space-y-2">
             <Label>Email Address</Label>
             <Input name="email" type="email" placeholder="patient@example.com" value={formik.values.email} onChange={formik.handleChange} onBlur={formik.handleBlur} className="bg-background/50 border-none ring-1 ring-border/50" />
-            <FormError message={formik.touched.email && formik.errors.email} />
+            <FormError message={(formik.touched.email && formik.errors.email) as string | undefined} />
             <p className="text-[11px] text-muted-foreground">Used to send email notifications when referrals are created.</p>
+          </div>
+
+          <div className="space-y-2 border-t pt-4 mt-2">
+            <Label className="text-xs font-semibold text-primary/80 uppercase tracking-wider">Patient Address</Label>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">District</Label>
+                <Input name="district" value={formik.values.district} onChange={formik.handleChange} onBlur={formik.handleBlur} className="bg-background/50 border-none ring-1 ring-border/50" placeholder="District" />
+                <FormError message={(formik.touched.district && formik.errors.district) as string | undefined} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Sector</Label>
+                <Input name="sector" value={formik.values.sector} onChange={formik.handleChange} onBlur={formik.handleBlur} className="bg-background/50 border-none ring-1 ring-border/50" placeholder="Sector" />
+                <FormError message={(formik.touched.sector && formik.errors.sector) as string | undefined} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Cell</Label>
+                <Input name="cell" value={formik.values.cell} onChange={formik.handleChange} onBlur={formik.handleBlur} className="bg-background/50 border-none ring-1 ring-border/50" placeholder="Cell" />
+                <FormError message={(formik.touched.cell && formik.errors.cell) as string | undefined} />
+              </div>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="border-t p-6 flex justify-between">

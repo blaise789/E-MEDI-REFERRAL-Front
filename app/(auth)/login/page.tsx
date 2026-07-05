@@ -10,10 +10,12 @@ import { Label } from "@/components/ui/label";
 import { ReferralLogo } from "@/components/referral-logo";
 import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { FormError } from "@/components/ui/form-error";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -22,11 +24,13 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
     try {
       await login(formData.email, formData.password);
-    } catch (error) {
-      console.error("Login failed:", error);
+    } catch (err: any) {
+      console.error("Login failed:", err);
+      setError(err?.data?.message || err?.message || "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
@@ -90,6 +94,11 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="rounded-md bg-destructive/15 p-3">
+                <FormError message={error} />
+              </div>
+            )}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>

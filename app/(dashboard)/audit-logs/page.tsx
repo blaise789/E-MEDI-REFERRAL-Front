@@ -57,7 +57,6 @@ export default function AuditLogsPage() {
   const isSysAdmin = user?.role === "SYS_ADMIN";
 
   // Data queries
-  const { data: hospitals } = useGetHospitalsQuery(undefined, { skip: !isSysAdmin });
   const { data: auditLogs, isLoading, refetch } = auditApi.useGetAuditLogsQuery({
     hospitalId: hospitalId === "ALL" ? undefined : hospitalId,
     startDate: startDate || undefined,
@@ -117,24 +116,7 @@ export default function AuditLogsPage() {
               </div>
             </div>
 
-            {isSysAdmin && (
-              <div className="space-y-2">
-                <Label htmlFor="hospital">Hospital / Facility</Label>
-                <Select value={hospitalId} onValueChange={setHospitalId}>
-                  <SelectTrigger id="hospital" className="bg-background/50 border-none ring-1 ring-border/50 h-10">
-                    <SelectValue placeholder="All facilities" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Facilities</SelectItem>
-                    {hospitals?.map((h) => (
-                      <SelectItem key={h.id} value={h.id}>
-                        {h.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+
 
             <div className="space-y-2">
               <Label htmlFor="startDate">From Date</Label>

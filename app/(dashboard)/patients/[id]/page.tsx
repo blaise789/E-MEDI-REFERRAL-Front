@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   Pencil,
   PowerOff,
+  MapPin,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -132,6 +133,13 @@ export default function PatientDetailPage() {
             <Detail icon={Shield} label="Insurance" value={patient.insurance || "None / Out-of-pocket"} />
             <Detail icon={Phone} label="Contact" value={(patient as any).contactNumber || "—"} />
             {(patient as any).email && <Detail icon={Activity} label="Email" value={(patient as any).email} />}
+            {((patient as any).cell || (patient as any).sector || (patient as any).district) && (
+              <Detail 
+                icon={MapPin} 
+                label="Address" 
+                value={[patient.district ? `District: ${patient.district}` : '', patient.sector ? `Sector: ${patient.sector}` : '', patient.cell ? `Cell: ${patient.cell}` : ''].filter(Boolean).join(' · ')} 
+              />
+            )}
             <div className="pt-2">
               <Badge variant={((patient as any).isActive === false) ? "destructive" : "secondary"}>
                 {((patient as any).isActive === false) ? "Inactive" : "Active"}

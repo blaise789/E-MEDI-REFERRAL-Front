@@ -242,9 +242,21 @@ export default function ReferralsPage() {
                       <TableRow key={referral.id} className="group hover:bg-muted/30 transition-colors">
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-semibold text-foreground">
-                              {referral.patient?.firstName} {referral.patient?.lastName}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-foreground">
+                                {referral.patient?.firstName} {referral.patient?.lastName}
+                              </span>
+                              {(() => {
+                                const urgency = (referral as any).urgency || (referral.isEmergency ? 'EMERGENCY' : 'ROUTINE');
+                                if (urgency === 'EMERGENCY') {
+                                  return <span className="inline-flex items-center rounded-full bg-red-500/10 px-1.5 py-0.5 text-[10px] font-medium text-red-600 ring-1 ring-inset ring-red-500/20 animate-pulse">Emergency</span>;
+                                }
+                                if (urgency === 'URGENT') {
+                                  return <span className="inline-flex items-center rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 ring-1 ring-inset ring-amber-500/20">Urgent</span>;
+                                }
+                                return null;
+                              })()}
+                            </div>
                             <span className="text-xs text-muted-foreground line-clamp-1">
                               {referral.diagnosis}
                             </span>

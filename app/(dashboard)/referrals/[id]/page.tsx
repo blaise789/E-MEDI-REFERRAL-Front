@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   useGetReferralByIdQuery, 
   useUpdateReferralStatusMutation,
-  useAddCounterReferralMutation 
+  useAddCounterReferralMutation
 } from "@/store/features/referral/referralSlice";
 import { 
   Clock, 
@@ -24,7 +24,10 @@ import {
   Activity,
   FileText,
   ArrowUpRight,
-  Plus
+  Plus,
+  AlertTriangle,
+  Download,
+  LogOut
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -60,9 +63,12 @@ export default function ReferralDetailsPage() {
   const [submitCounter, { isLoading: isCounterLoading }] = useAddCounterReferralMutation();
   
   const [isCounterModalOpen, setIsCounterModalOpen] = useState(false);
+  const [isDischargeModalOpen, setIsDischargeModalOpen] = useState(false);
   const [dischargeNotes, setDischargeNotes] = useState("");
   const [followUp, setFollowUp] = useState("");
+  const [counterRefer, setCounterRefer] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSubmittingDischarge, setIsSubmittingDischarge] = useState(false);
 
   const handleUpdateStatus = async (status: string) => {
     try {
@@ -73,16 +79,25 @@ export default function ReferralDetailsPage() {
     }
   };
 
-  const handleCounterReferral = async () => {
+  const handleDischarge = async () => {
+    setIsSubmittingDischarge(true);
     try {
-      await submitCounter({ 
-        id: id as string, 
-        data: { dischargeNotes, followUpInstructions: followUp } 
-      }).unwrap();
-      toast({ title: "Counter-Referral Submitted", description: "Patient has been successfully referred back to the source hospital." });
-      setIsCounterModalOpen(false);
+      const token = localStorage.getItem("mediReferToken");
+      const res = await fetch(`${BASE_API_URL}/referrals/${id}/discharge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ dischargeNotes, followUpInstructions: followUp, counterRefer }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to discharge patient");
+      }
+      toast({ title: "Patient Discharged", description: counterRefer ? "Counter-referral submitted to source hospital." : "Patient successfully discharged." });
+      setIsDischargeModalOpen(false);
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error", description: err.data?.message || "Failed to submit counter-referral" });
+      toast({ variant: "destructive", title: "Discharge Failed", description: err.message });
+    } finally {
+      setIsSubmittingDischarge(false);
     }
   };
 
@@ -157,21 +172,68 @@ export default function ReferralDetailsPage() {
                   <User className="h-5 w-5 text-primary" />
                   Patient Profile
                 </CardTitle>
-                <div className="flex gap-2">
-                   <Badge variant="secondary">Case ID: {referral.id.substring(0, 8)}</Badge>
-                </div>
+                 <div className="flex gap-2">
+                    {(() => {
+                      const urgency = (referral as any).urgency || (referral.isEmergency ? 'EMERGENCY' : 'ROUTINE');
+                      if (urgency === 'EMERGENCY') {
+                        return <Badge className="bg-destructive text-destructive-foreground animate-pulse border-none">EMERGENCY</Badge>;
+                      }
+                      if (urgency === 'URGENT') {
+                        return <Badge className="bg-amber-500 text-white border-none">URGENT</Badge>;
+                      }
+                      return <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30">ROUTINE</Badge>;
+                    })()}
+                    <Badge variant="secondary">Case ID: {referral.id.substring(0, 8)}</Badge>
+                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6 grid md:grid-cols-2 gap-8 font-medium">
               <div className="space-y-6">
                 <DetailItem label="Full Name" value={`${referral.patient?.firstName} ${referral.patient?.lastName}`} />
                 <DetailItem label="National ID / Gender" value={`${referral.patient?.nationalId || "N/A"} · ${referral.patient?.gender}`} />
+                {referral.patient?.contactNumber && (
+                  <DetailItem label="Contact Number" value={referral.patient.contactNumber} />
+                )}
+                {referral.patient?.email && (
+                  <DetailItem label="Email Address" value={referral.patient.email} />
+                )}
+                {referral.patient && (referral.patient.cell || referral.patient.sector || referral.patient.district) && (
+                  <DetailItem label="Patient Address" value={[referral.patient.cell ? `Cell: ${referral.patient.cell}` : '', referral.patient.sector ? `Sector: ${referral.patient.sector}` : '', referral.patient.district ? `District: ${referral.patient.district}` : ''].filter(Boolean).join(', ')} />
+                )}
                 <DetailItem label="Insurance Provider" value={referral.patient?.insurance || "None / Out-of-pocket"} />
+                {(referral as any).referringDoctorName && (
+                  <DetailItem label="Referring Clinician / Doctor" value={`${(referral as any).referringDoctorName}${(referral as any).referringDoctorContact ? ` (${(referral as any).referringDoctorContact})` : ''}`} />
+                )}
                 <DetailItem label="Initiated By" value={`${referral.initiatedBy?.firstName} ${referral.initiatedBy?.lastName} (${referral.initiatedBy?.role.replace("_", " ")})`} />
               </div>
               <div className="space-y-6">
                 <DetailItem label="Clinical Diagnosis" value={referral.diagnosis} />
+                {(referral as any).expectedAdmissionDate && (
+                  <DetailItem 
+                    label="Expected Admission Date" 
+                    value={new Date((referral as any).expectedAdmissionDate).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })} 
+                  />
+                )}
+                {(referral as any).significantFindings && (
+                  <DetailItem label="Significant Findings" value={(referral as any).significantFindings} />
+                )}
+                {(referral as any).proceduresReceived && (
+                  <DetailItem label="Procedures & Treatments Received" value={(referral as any).proceduresReceived} />
+                )}
+                {(referral as any).currentMedications && (
+                  <DetailItem label="Current Medications" value={(referral as any).currentMedications} />
+                )}
+                {(referral as any).patientCondition && (
+                  <DetailItem label="Immediate Condition" value={(referral as any).patientCondition} />
+                )}
                 <DetailItem label="Reason for Transfer" value={referral.reasonForTransfer} />
+                {(referral as any).monitoringRequired && (
+                  <DetailItem label="Transport Monitoring" value={(referral as any).monitoringRequired} />
+                )}
                 <DetailItem 
                   label="Transport Mode" 
                   value={(referral as any).transportType === 'PRIVATE' ? '🚗 Private Vehicle' : '🚑 Ambulance'} 
@@ -258,21 +320,21 @@ export default function ReferralDetailsPage() {
               <div className="grid gap-3 pt-4">
                  {isReceiving && !isSysAdmin ? (
                    <>
-                     {referral.status === "SUBMITTED" && (
-                       <>
-                         <Button className="w-full h-11" onClick={() => handleUpdateStatus("ADMITTED")} disabled={isUpdating}>
-                           <Plus className="h-4 w-4 mr-2" /> Confirm Admission
-                         </Button>
-                       </>
-                     )}
-                     {referral.status === "ADMITTED" && (
+                      {referral.status === "SUBMITTED" && (
+                        <>
+                          <Button className="w-full h-11" onClick={() => handleUpdateStatus("ADMITTED")} disabled={isUpdating}>
+                            <Plus className="h-4 w-4 mr-2" /> Confirm Admission
+                          </Button>
+                        </>
+                      )}
+                      {referral.status === "ADMITTED" && (
                         <Button 
-                          className="w-full h-11 bg-slate-900" 
-                          onClick={() => setIsCounterModalOpen(true)}
+                          className="w-full h-11 bg-slate-900 hover:bg-slate-800" 
+                          onClick={() => setIsDischargeModalOpen(true)}
                         >
-                          <Stethoscope className="h-4 w-4 mr-2" /> Counter-Refer Patient
+                          <LogOut className="h-4 w-4 mr-2" /> Discharge Patient
                         </Button>
-                     )}
+                      )}
                    </>
                  ) : isSysAdmin ? (
                    <div className="p-4 bg-muted/50 rounded-xl text-center">
@@ -315,44 +377,61 @@ export default function ReferralDetailsPage() {
         </div>
       </div>
 
-      {/* Counter-Referral Modal */}
-      <Dialog open={isCounterModalOpen} onOpenChange={setIsCounterModalOpen}>
+      {/* Discharge Patient Modal */}
+      <Dialog open={isDischargeModalOpen} onOpenChange={setIsDischargeModalOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Counter-Referral Feedback</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <LogOut className="h-5 w-5" /> Discharge Patient
+            </DialogTitle>
             <DialogDescription>
-              Complete the patient care cycle by providing discharge notes and follow-up instructions back to {referral.referringHospital?.name}.
+              Complete this patient's care episode. Optionally send a counter-referral back to {referral.referringHospital?.name} for follow-up care.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
+          <div className="grid gap-5 py-4">
             <div className="space-y-2">
-              <Label htmlFor="notes">Discharge Summary & Treatment Notes</Label>
+              <Label htmlFor="notes">Discharge Summary / Treatment Notes <span className="text-muted-foreground">(optional)</span></Label>
               <Textarea 
                 id="notes" 
-                placeholder="Describe treatment provided and patient's stable condition..." 
-                className="min-h-32"
+                placeholder="Describe treatment provided and patient's condition at discharge..." 
+                className="min-h-28"
                 value={dischargeNotes}
                 onChange={(e) => setDischargeNotes(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="followup">Follow-up Instructions</Label>
-              <Textarea 
-                id="followup" 
-                placeholder="Medication, appointment schedules, or therapy requirements..." 
-                value={followUp}
-                onChange={(e) => setFollowUp(e.target.value)}
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-muted/30">
+              <input 
+                type="checkbox" 
+                id="counterRefer" 
+                checked={counterRefer}
+                onChange={(e) => setCounterRefer(e.target.checked)}
+                className="h-4 w-4 accent-primary"
               />
+              <label htmlFor="counterRefer" className="text-sm font-medium cursor-pointer">
+                Send counter-referral to <strong>{referral.referringHospital?.name}</strong> with follow-up instructions
+              </label>
             </div>
+            {counterRefer && (
+              <div className="space-y-2">
+                <Label htmlFor="followup">Follow-up Instructions</Label>
+                <Textarea 
+                  id="followup" 
+                  placeholder="Medication dosages, appointment schedules, therapy requirements..." 
+                  value={followUp}
+                  onChange={(e) => setFollowUp(e.target.value)}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsCounterModalOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setIsDischargeModalOpen(false)}>Cancel</Button>
             <Button 
-                onClick={handleCounterReferral} 
-                className="bg-primary" 
-                disabled={isCounterLoading || !dischargeNotes || !followUp}
+              onClick={handleDischarge} 
+              className="bg-slate-900 hover:bg-slate-800" 
+              disabled={isSubmittingDischarge}
             >
-              {isCounterLoading ? "Submitting..." : "Submit Counter-Referral"}
+              <LogOut className="h-4 w-4 mr-2" />
+              {isSubmittingDischarge ? "Discharging..." : "Confirm Discharge"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -390,6 +469,7 @@ function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "SUBMITTED": return <FileText className={cn(iconClass, "text-primary")} />;
     case "ADMITTED": return <Activity className={cn(iconClass, "text-purple-600")} />;
+    case "DISCHARGED": return <CheckCircle2 className={cn(iconClass, "text-emerald-600")} />;
     case "COUNTER_REFERRED": return <ArrowUpRight className={cn(iconClass, "text-slate-600")} />;
     default: return <Clock className={cn(iconClass, "text-muted-foreground")} />;
   }

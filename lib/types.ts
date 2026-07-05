@@ -114,6 +114,9 @@ export interface Patient {
   email?: string | null;
   isActive: boolean;
   hospitalId?: string | null;
+  cell?: string | null;
+  sector?: string | null;
+  district?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -158,6 +161,16 @@ export interface Referral {
   targetSpecialist?: Specialist | null;
   counterReferral?: CounterReferral;
   logs?: AuditLog[];
+  significantFindings?: string | null;
+  proceduresReceived?: string | null;
+  currentMedications?: string | null;
+  patientCondition?: string | null;
+  monitoringRequired?: string | null;
+  isEmergency: boolean;
+  urgency: 'ROUTINE' | 'URGENT' | 'EMERGENCY';
+  referringDoctorName?: string | null;
+  referringDoctorContact?: string | null;
+  expectedAdmissionDate?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -167,6 +180,7 @@ export interface Notification {
   message: string;
   isRead: boolean;
   recipientId: string;
+  referralId?: string | null;
   createdAt: string;
 }
 
@@ -228,6 +242,16 @@ export interface CreateReferralRequest {
   diagnosis: string;
   preTransferTreatment?: string | null;
   transportType?: string | null;
+  significantFindings?: string | null;
+  proceduresReceived?: string | null;
+  currentMedications?: string | null;
+  patientCondition?: string | null;
+  monitoringRequired?: string | null;
+  isEmergency?: boolean;
+  urgency?: 'ROUTINE' | 'URGENT' | 'EMERGENCY';
+  referringDoctorName?: string;
+  referringDoctorContact?: string;
+  expectedAdmissionDate?: string;
 }
 
 export interface UpdateReferralStatusRequest {

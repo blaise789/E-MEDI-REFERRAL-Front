@@ -44,7 +44,6 @@ const STEPS = [
   { id: "review",   title: "Review",        icon: ClipboardCheck },
 ];
 
-/** Validation Schemas per step */
 const validationSchemas = [
   // Step 0: Patient
   Yup.object().shape({
@@ -58,6 +57,10 @@ const validationSchemas = [
         dateOfBirth: Yup.string().required("Date of birth is required"),
         gender: Yup.string().required("Gender is required"),
         insurance: Yup.string().nullable(),
+        cell: Yup.string().required("Cell address is required"),
+        sector: Yup.string().required("Sector address is required"),
+        district: Yup.string().required("District address is required"),
+        email: Yup.string().email("Invalid email").required("Email is required"),
       }),
       otherwise: (schema) => schema.strip(), // Remove newPatient from validation if patientId exists
     }),
@@ -71,6 +74,10 @@ const validationSchemas = [
   Yup.object().shape({
     diagnosis: Yup.string().required("Initial diagnosis is required").min(3, "Diagnosis is too short"),
     reasonForTransfer: Yup.string().required("Reason for transfer is required").min(10, "Please provide more detail"),
+    referringDoctorName: Yup.string().required("Referring clinician name is required"),
+    referringDoctorContact: Yup.string().required("Referring clinician contact number is required"),
+    urgency: Yup.string().oneOf(["ROUTINE", "URGENT", "EMERGENCY"]).required("Urgency level is required"),
+    expectedAdmissionDate: Yup.string().required("Expected admission date is required"),
   }),
   // Step 3: Review (Confirm)
   Yup.object().shape({}),
@@ -94,19 +101,33 @@ export default function CreateReferralPage() {
       patientId: "",
       referringHospitalId: user?.hospitalId || "", // Default to user's hospital if assigned
       receivingHospitalId: "",
-      targetWardType: undefined,
-      targetSpecialistId: undefined,
+      targetWardType: undefined as string | undefined,
+      targetSpecialistId: undefined as string | undefined,
       reasonForTransfer: "",
       diagnosis: "",
       preTransferTreatment: "",
+      significantFindings: "",
+      proceduresReceived: "",
+      currentMedications: "",
+      patientCondition: "",
+      monitoringRequired: "",
       transportType: "AMBULANCE",
+      isEmergency: false,
+      urgency: "ROUTINE",
+      referringDoctorName: "",
+      referringDoctorContact: "",
+      expectedAdmissionDate: "",
       newPatient: {
          firstName: "",
          lastName: "",
          nationalId: "",
          dateOfBirth: "",
          gender: "MALE",
-         insurance: ""
+         insurance: "",
+         cell: "",
+         sector: "",
+         district: "",
+         email: "",
       }
     },
     validationSchema: validationSchemas[currentStep],
@@ -140,7 +161,17 @@ export default function CreateReferralPage() {
           reasonForTransfer: values.reasonForTransfer,
           diagnosis: values.diagnosis,
           preTransferTreatment: values.preTransferTreatment,
+          significantFindings: values.significantFindings,
+          proceduresReceived: values.proceduresReceived,
+          currentMedications: values.currentMedications,
+          patientCondition: values.patientCondition,
+          monitoringRequired: values.monitoringRequired,
           transportType: values.transportType,
+          isEmergency: values.isEmergency,
+          urgency: values.urgency as any,
+          referringDoctorName: values.referringDoctorName,
+          referringDoctorContact: values.referringDoctorContact,
+          expectedAdmissionDate: values.expectedAdmissionDate || undefined,
         }).unwrap();
 
         toast({
@@ -351,7 +382,68 @@ export default function CreateReferralPage() {
                        onChange={formik.handleChange}
                        onBlur={formik.handleBlur}
                      />
+                   <div className="space-y-2">
+                      <Label>Email Address</Label>
+                      <Input 
+                        name="newPatient.email"
+                        type="email"
+                        disabled={!!formik.values.patientId} 
+                        placeholder="e.g. patient@domain.com" 
+                        className="bg-background/50 border-none ring-1 ring-border/50"
+                        value={formik.values.newPatient.email}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                      />
+                      <FormError message={formik.touched.newPatient?.email && (formik.errors.newPatient as any)?.email} />
+                   </div>
                   </div>
+               </div>
+
+               <div className="relative py-2">
+                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-dashed" /></div>
+                 <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Patient Address</span></div>
+               </div>
+
+               <div className="grid grid-cols-3 gap-4">
+                 <div className="space-y-2">
+                    <Label>District</Label>
+                    <Input 
+                      name="newPatient.district"
+                      disabled={!!formik.values.patientId} 
+                      placeholder="e.g. Nyarugenge" 
+                      className="bg-background/50 border-none ring-1 ring-border/50"
+                      value={formik.values.newPatient.district}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                    />
+                    <FormError message={formik.touched.newPatient?.district && (formik.errors.newPatient as any)?.district} />
+                 </div>
+                 <div className="space-y-2">
+                    <Label>Sector</Label>
+                    <Input 
+                      name="newPatient.sector"
+                      disabled={!!formik.values.patientId} 
+                      placeholder="e.g. Nyarugenge" 
+                      className="bg-background/50 border-none ring-1 ring-border/50"
+                      value={formik.values.newPatient.sector}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                    />
+                    <FormError message={formik.touched.newPatient?.sector && (formik.errors.newPatient as any)?.sector} />
+                 </div>
+                 <div className="space-y-2">
+                    <Label>Cell</Label>
+                    <Input 
+                      name="newPatient.cell"
+                      disabled={!!formik.values.patientId} 
+                      placeholder="e.g. Kiyovu" 
+                      className="bg-background/50 border-none ring-1 ring-border/50"
+                      value={formik.values.newPatient.cell}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                    />
+                    <FormError message={formik.touched.newPatient?.cell && (formik.errors.newPatient as any)?.cell} />
+                 </div>
                </div>
              </div>
           )}
@@ -469,6 +561,92 @@ export default function CreateReferralPage() {
                  </div>
                </div>
 
+                <div className="space-y-2">
+                   <Label>Urgency Level</Label>
+                   <div className="grid grid-cols-3 gap-3">
+                     <button
+                       type="button"
+                       onClick={() => {
+                         formik.setFieldValue("urgency", "ROUTINE");
+                         formik.setFieldValue("isEmergency", false);
+                       }}
+                       className={cn(
+                         "p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all text-center",
+                         formik.values.urgency === "ROUTINE" ? "border-primary bg-primary/5 shadow-inner" : "border-border hover:bg-muted/30"
+                       )}
+                     >
+                       <span className="text-lg">🟢</span>
+                       <span className="text-xs font-semibold">Routine</span>
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => {
+                         formik.setFieldValue("urgency", "URGENT");
+                         formik.setFieldValue("isEmergency", false);
+                       }}
+                       className={cn(
+                         "p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all text-center",
+                         formik.values.urgency === "URGENT" ? "border-amber-500 bg-amber-500/5 shadow-inner" : "border-border hover:bg-muted/30"
+                       )}
+                     >
+                       <span className="text-lg">🟡</span>
+                       <span className="text-xs font-semibold text-amber-600">Urgent</span>
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => {
+                         formik.setFieldValue("urgency", "EMERGENCY");
+                         formik.setFieldValue("isEmergency", true);
+                       }}
+                       className={cn(
+                         "p-3 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all text-center",
+                         formik.values.urgency === "EMERGENCY" ? "border-destructive bg-destructive/5 shadow-inner" : "border-border hover:bg-muted/30"
+                       )}
+                     >
+                       <span className="text-lg">🚨</span>
+                       <span className="text-xs font-semibold text-destructive">Emergency</span>
+                     </button>
+                   </div>
+                 </div>
+
+                {formik.values.isEmergency && (() => {
+                  const hasAvailableSpecialist = selectedReceivingHospital?.specialists?.some(s => s.status === "AVAILABLE");
+                  const selectedWardType = formik.values.targetWardType;
+                  const matchingWards = selectedReceivingHospital?.beds?.filter(b => !selectedWardType || b.wardType === selectedWardType) || [];
+                  const hasFreeBed = matchingWards.some(b => b.totalBeds - b.occupiedBeds > 0);
+
+                  if (!hasAvailableSpecialist || !hasFreeBed) {
+                    return (
+                      <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-sm space-y-2 animate-in fade-in duration-300">
+                        <div className="font-bold flex items-center gap-2">
+                          <span>⚠️</span> Emergency Compatibility Warning
+                        </div>
+                        <ul className="list-disc list-inside space-y-1 text-xs opacity-90">
+                          {!hasAvailableSpecialist && (
+                            <li>No available specialists/surgeons at the receiving hospital.</li>
+                          )}
+                          {!hasFreeBed && (
+                            <li>No available beds in the {selectedWardType ? `${selectedWardType.replace("_", " ")} ward` : "receiving hospital"}.</li>
+                          )}
+                        </ul>
+                        <p className="text-[11px] font-medium pt-1">
+                          Note: The system will reject this submission if validation fails on the backend.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm animate-in fade-in duration-300">
+                      <div className="font-bold flex items-center gap-2">
+                        <span>✅</span> Emergency Compatibility Verified
+                      </div>
+                      <p className="text-xs opacity-90 mt-1">
+                        Receiving facility has active specialist availability and open bed capacity for this referral.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                <div className="space-y-2">
                  <Label>Transport Mode</Label>
                  <div className="grid grid-cols-2 gap-3">
@@ -498,18 +676,60 @@ export default function CreateReferralPage() {
                </div>
 
                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Diagnosis</Label>
-                    <Input 
-                      name="diagnosis"
-                      placeholder="Primary diagnosis..." 
-                      className="bg-background/50 border-none ring-1 ring-border/50"
-                      value={formik.values.diagnosis}
-                      onChange={formik.handleChange}
-                      onBlur={formik.handleBlur}
-                    />
-                    <FormError message={formik.touched.diagnosis && formik.errors.diagnosis} />
-                  </div>
+                 <div className="space-y-3 border-b pb-4 mb-2">
+                   <Label className="text-xs font-semibold text-primary/80 uppercase tracking-wider">Referring Clinician Details & Timeline</Label>
+                   <div className="grid md:grid-cols-3 gap-4">
+                     <div className="space-y-2">
+                       <Label>Referring Doctor Name</Label>
+                       <Input 
+                         name="referringDoctorName"
+                         placeholder="Dr. Firstname Lastname..." 
+                         className="bg-background/50 border-none ring-1 ring-border/50"
+                         value={formik.values.referringDoctorName}
+                         onChange={formik.handleChange}
+                         onBlur={formik.handleBlur}
+                       />
+                       <FormError message={(formik.touched.referringDoctorName && formik.errors.referringDoctorName) as string | undefined} />
+                     </div>
+                     <div className="space-y-2">
+                       <Label>Referring Doctor Contact Number</Label>
+                       <Input 
+                         name="referringDoctorContact"
+                         placeholder="+250..." 
+                         className="bg-background/50 border-none ring-1 ring-border/50"
+                         value={formik.values.referringDoctorContact}
+                         onChange={formik.handleChange}
+                         onBlur={formik.handleBlur}
+                       />
+                       <FormError message={(formik.touched.referringDoctorContact && formik.errors.referringDoctorContact) as string | undefined} />
+                     </div>
+                     <div className="space-y-2">
+                       <Label>Expected Admission Date</Label>
+                       <Input 
+                         type="date"
+                         name="expectedAdmissionDate"
+                         className="bg-background/50 border-none ring-1 ring-border/50 h-12"
+                         value={formik.values.expectedAdmissionDate}
+                         onChange={formik.handleChange}
+                         onBlur={formik.handleBlur}
+                       />
+                       <FormError message={(formik.touched.expectedAdmissionDate && formik.errors.expectedAdmissionDate) as string | undefined} />
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="space-y-2">
+                   <Label>Diagnosis</Label>
+                   <Input 
+                     name="diagnosis"
+                     placeholder="Primary diagnosis..." 
+                     className="bg-background/50 border-none ring-1 ring-border/50"
+                     value={formik.values.diagnosis}
+                     onChange={formik.handleChange}
+                     onBlur={formik.handleBlur}
+                   />
+                   <FormError message={(formik.touched.diagnosis && formik.errors.diagnosis) as string | undefined} />
+                 </div>
                   <div className="space-y-2">
                     <Label>Reason for Transfer</Label>
                     <Textarea 
@@ -522,6 +742,72 @@ export default function CreateReferralPage() {
                     />
                     <FormError message={formik.touched.reasonForTransfer && formik.errors.reasonForTransfer} />
                   </div>
+                   <div className="space-y-2">
+                     <Label>Significant Findings</Label>
+                     <Textarea 
+                       name="significantFindings"
+                       placeholder="Enter significant physical findings, lab results, imaging, etc..." 
+                       className="bg-background/50 border-none ring-1 ring-border/50 min-h-20"
+                       value={formik.values.significantFindings}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label>Procedures & Treatments Received</Label>
+                     <Textarea 
+                       name="proceduresReceived"
+                       placeholder="List procedures performed or major interventions administered..." 
+                       className="bg-background/50 border-none ring-1 ring-border/50 min-h-20"
+                       value={formik.values.proceduresReceived}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label>List of Current Medications</Label>
+                     <Input 
+                       name="currentMedications"
+                       placeholder="e.g. Paracetamol 1g PO, Ceftriaxone 1g IV..." 
+                       className="bg-background/50 border-none ring-1 ring-border/50"
+                       value={formik.values.currentMedications}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label>Patient Immediate Condition</Label>
+                     <Input 
+                       name="patientCondition"
+                       placeholder="e.g. Stable, Critical, Conscious, Sedated..." 
+                       className="bg-background/50 border-none ring-1 ring-border/50"
+                       value={formik.values.patientCondition}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label>Required Monitoring During Transport</Label>
+                     <Input 
+                       name="monitoringRequired"
+                       placeholder="e.g. O2 saturation, BP every 15 min, ECG..." 
+                       className="bg-background/50 border-none ring-1 ring-border/50"
+                       value={formik.values.monitoringRequired}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label>Pre-Transfer Treatment (Optional)</Label>
+                     <Textarea 
+                       name="preTransferTreatment"
+                       placeholder="Any other specific pre-transfer treatment or instructions..." 
+                       className="bg-background/50 border-none ring-1 ring-border/50 min-h-20"
+                       value={formik.values.preTransferTreatment}
+                       onChange={formik.handleChange}
+                       onBlur={formik.handleBlur}
+                     />
+                   </div>
                </div>
             </div>
           )}
@@ -572,6 +858,36 @@ export default function CreateReferralPage() {
                          <span className="text-muted-foreground">Diagnosis:</span>
                          <span className="font-medium text-right truncate max-w-40">{formik.values.diagnosis}</span>
                        </div>
+                        {formik.values.significantFindings && (
+                          <div className="text-sm border-b pb-2 flex justify-between gap-10">
+                            <span className="text-muted-foreground">Findings:</span>
+                            <span className="font-medium text-right truncate max-w-[160px]">{formik.values.significantFindings}</span>
+                          </div>
+                        )}
+                        {formik.values.proceduresReceived && (
+                          <div className="text-sm border-b pb-2 flex justify-between gap-10">
+                            <span className="text-muted-foreground">Procedures:</span>
+                            <span className="font-medium text-right truncate max-w-[160px]">{formik.values.proceduresReceived}</span>
+                          </div>
+                        )}
+                        {formik.values.currentMedications && (
+                          <div className="text-sm border-b pb-2 flex justify-between gap-10">
+                            <span className="text-muted-foreground">Medications:</span>
+                            <span className="font-medium text-right truncate max-w-[160px]">{formik.values.currentMedications}</span>
+                          </div>
+                        )}
+                        {formik.values.patientCondition && (
+                          <div className="text-sm border-b pb-2 flex justify-between gap-10">
+                            <span className="text-muted-foreground">Condition:</span>
+                            <span className="font-medium text-right truncate max-w-[160px]">{formik.values.patientCondition}</span>
+                          </div>
+                        )}
+                        {formik.values.monitoringRequired && (
+                          <div className="text-sm border-b pb-2 flex justify-between gap-10">
+                            <span className="text-muted-foreground">Monitoring:</span>
+                            <span className="font-medium text-right truncate max-w-[160px]">{formik.values.monitoringRequired}</span>
+                          </div>
+                        )}
                     </div>
                   </div>
                </div>

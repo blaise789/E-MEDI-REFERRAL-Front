@@ -57,6 +57,7 @@ export default function PatientsPage() {
     initialValues: {
       firstName: "", lastName: "", nationalId: "", gender: "",
       dateOfBirth: "", contactNumber: "", insurance: "",
+      email: "", cell: "", sector: "", district: "",
     },
     validationSchema: Yup.object({
       firstName: Yup.string().required("First name is required"),
@@ -64,6 +65,10 @@ export default function PatientsPage() {
       gender: Yup.string().required("Gender is required"),
       dateOfBirth: Yup.date().required("Date of birth is required"),
       nationalId: Yup.string().required("National ID is required").min(16, "Must be 16 digits"),
+      email: Yup.string().email("Invalid email").nullable(),
+      cell: Yup.string().nullable(),
+      sector: Yup.string().nullable(),
+      district: Yup.string().nullable(),
     }),
     onSubmit: async (values, { resetForm }) => {
       try {
@@ -144,9 +149,34 @@ export default function PatientsPage() {
                  </div>
                </div>
 
-               <div className="space-y-2">
-                 <Label>Insurance Details</Label>
-                 <Input id="insurance" {...formik.getFieldProps("insurance")} placeholder="Mutuelle/RAMA" />
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                   <Label>Insurance Details</Label>
+                   <Input id="insurance" {...formik.getFieldProps("insurance")} placeholder="Mutuelle/RAMA" />
+                 </div>
+                 <div className="space-y-2">
+                   <Label>Email Address</Label>
+                   <Input id="email" type="email" {...formik.getFieldProps("email")} placeholder="patient@example.com" />
+                   {formik.touched.email && formik.errors.email && <div className="text-xs text-destructive">{formik.errors.email as string}</div>}
+                 </div>
+               </div>
+
+                <div className="space-y-2 border-t pt-4 mt-2">
+                  <Label className="text-xs font-semibold text-primary/80 uppercase tracking-wider">Patient Address</Label>
+                 <div className="grid grid-cols-3 gap-2">
+                   <div>
+                     <Label className="text-[10px] text-muted-foreground">District</Label>
+                     <Input id="district" {...formik.getFieldProps("district")} placeholder="District" />
+                   </div>
+                   <div>
+                     <Label className="text-[10px] text-muted-foreground">Sector</Label>
+                     <Input id="sector" {...formik.getFieldProps("sector")} placeholder="Sector" />
+                   </div>
+                   <div>
+                     <Label className="text-[10px] text-muted-foreground">Cell</Label>
+                     <Input id="cell" {...formik.getFieldProps("cell")} placeholder="Cell" />
+                   </div>
+                 </div>
                </div>
 
                <div className="flex justify-end gap-3 pt-4">

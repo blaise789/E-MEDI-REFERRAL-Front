@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useGetNotificationsQuery, useMarkAsReadMutation, useMarkAllAsReadMutation } from "@/store/features/notification/notificationSlice";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 export default function NotificationsPage() {
   const { data: notifications, isLoading, refetch } = useGetNotificationsQuery();
@@ -58,6 +59,7 @@ export default function NotificationsPage() {
             <NotificationItem 
               key={n.id}
               id={n.id}
+              referralId={n.referralId}
               title={n.type?.replace("_", " ") || "Clinical Update"} 
               message={n.message} 
               time={formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })} 
@@ -71,15 +73,27 @@ export default function NotificationsPage() {
   );
 }
 
-function NotificationItem({ id, title, message, time, unread, onMarkRead }: any) {
+function NotificationItem({ id, referralId, title, message, time, unread, onMarkRead }: any) {
+  const CardWrapper = ({ children }: { children: React.ReactNode }) => {
+    if (referralId) {
+      return (
+        <Link href={`/referrals/${referralId}`} className="block">
+          {children}
+        </Link>
+      );
+    }
+    return <>{children}</>;
+  };
+
   return (
-    <Card 
-      onClick={() => unread && onMarkRead()}
-      className={cn(
-        "border-none shadow-sm transition-all hover:bg-muted/30 cursor-pointer", 
-        unread ? "bg-primary/5 ring-1 ring-primary/10" : "bg-card/50"
-      )}
-    >
+    <CardWrapper>
+      <Card 
+        onClick={() => unread && onMarkRead()}
+        className={cn(
+          "border-none shadow-sm transition-all hover:bg-muted/30 cursor-pointer", 
+          unread ? "bg-primary/5 ring-1 ring-primary/10" : "bg-card/50"
+        )}
+      >
       <CardContent className="p-4 flex gap-4 items-start">
         <div className={cn(
           "h-10 w-10 rounded-full flex items-center justify-center shrink-0", 
@@ -105,6 +119,7 @@ function NotificationItem({ id, title, message, time, unread, onMarkRead }: any)
         )}
       </CardContent>
     </Card>
+    </CardWrapper>
   );
 }
 
