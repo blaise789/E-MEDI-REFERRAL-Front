@@ -58,7 +58,7 @@ export default function ReferralDetailsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: referral, isLoading } = useGetReferralByIdQuery(id as string);
+  const { data: referral, isLoading, refetch } = useGetReferralByIdQuery(id as string);
   const [updateStatus, { isLoading: isUpdating }] = useUpdateReferralStatusMutation();
   const [submitCounter, { isLoading: isCounterLoading }] = useAddCounterReferralMutation();
   
@@ -94,6 +94,7 @@ export default function ReferralDetailsPage() {
       }
       toast({ title: "Patient Discharged", description: counterRefer ? "Counter-referral submitted to source hospital." : "Patient successfully discharged." });
       setIsDischargeModalOpen(false);
+      refetch();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Discharge Failed", description: err.message });
     } finally {
