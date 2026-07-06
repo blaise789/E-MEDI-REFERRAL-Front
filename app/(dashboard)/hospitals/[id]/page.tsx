@@ -20,12 +20,16 @@ import {
   Activity,
   ArrowLeft,
   Building2,
-  Users
+  Users,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 import {
-  useGetHospitalDashboardQuery
+  useGetHospitalDashboardQuery,
+  useDeleteWardMutation
 } from "@/store/features/hospital/hospitalSlice";
+import { useAuth } from "@/lib/auth-context";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 
@@ -35,7 +39,25 @@ export default function HospitalDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const unwrappedParams = use(params);
-  const { data, isLoading } = useGetHospitalDashboardQuery(unwrappedParams.id);
+  const { data, isLoading, refetch } = useGetHospitalDashboardQuery(unwrappedParams.id);
+  const [deleteWard, { isLoading: isDeletingWard }] = useDeleteWardMutation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const isSysAdmin = user?.role === "SYS_ADMIN";
+  const isHospitalAdmin = user?.role === "HOSPITAL_ADMIN" && user?.hospitalId === unwrappedParams.id;
+  const canDelete = isSysAdmin || isHospitalAdmin;
+
+  const handleDeleteWard = async (wardId: string) => {
+    if (!confirm("Are you sure you want to delete this ward? This action cannot be undone.")) return;
+    try {
+      await deleteWard(wardId).unwrap();
+      toast({ title: "Ward Deleted", description: "The ward has been permanently deleted." });
+      refetch();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Delete Failed", description: err.data?.message || "Failed to delete ward" });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -131,6 +153,7 @@ export default function HospitalDetailsPage({
                   <TableHead>Ward</TableHead>
                   <TableHead>Occupancy</TableHead>
                   <TableHead className="text-right">Avail / Total</TableHead>
+                  {canDelete && <TableHead className="w-10"></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -168,6 +191,13 @@ export default function HospitalDetailsPage({
                           )}>{available}</span>
                           <span className="text-muted-foreground text-xs"> / {bed.totalBeds}</span>
                         </TableCell>
+                        {canDelete && (
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:bg-rose-50" onClick={() => handleDeleteWard(bed.id)} disabled={isDeletingWard}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })

@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   useGetReferralByIdQuery, 
   useUpdateReferralStatusMutation,
-  useAddCounterReferralMutation
+  useAddCounterReferralMutation,
+  useDeleteReferralMutation
 } from "@/store/features/referral/referralSlice";
 import { 
   Clock, 
@@ -27,7 +28,8 @@ import {
   Plus,
   AlertTriangle,
   Download,
-  LogOut
+  LogOut,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -61,6 +63,7 @@ export default function ReferralDetailsPage() {
   const { data: referral, isLoading, refetch } = useGetReferralByIdQuery(id as string);
   const [updateStatus, { isLoading: isUpdating }] = useUpdateReferralStatusMutation();
   const [submitCounter, { isLoading: isCounterLoading }] = useAddCounterReferralMutation();
+  const [deleteReferral, { isLoading: isDeleting }] = useDeleteReferralMutation();
   
   const [isCounterModalOpen, setIsCounterModalOpen] = useState(false);
   const [isDischargeModalOpen, setIsDischargeModalOpen] = useState(false);
@@ -123,11 +126,24 @@ export default function ReferralDetailsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this referral? This action cannot be undone.")) return;
+    try {
+      await deleteReferral(id as string).unwrap();
+      toast({ title: "Referral Deleted", description: "The referral has been permanently deleted." });
+      router.push("/referrals");
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Delete Failed", description: err.data?.message || "Failed to delete referral" });
+    }
+  };
+
   if (isLoading) return <div className="flex items-center justify-center h-96">Loading...</div>;
   if (!referral) return <div className="text-center h-96 flex items-center justify-center">Referral not found.</div>;
 
   const isReceiving = referral.receivingHospitalId === user?.hospitalId;
   const isSysAdmin = user?.role === "SYS_ADMIN";
+  const isHospitalAdmin = user?.role === "HOSPITAL_ADMIN" && (referral.referringHospitalId === user?.hospitalId || referral.receivingHospitalId === user?.hospitalId);
+  const canDelete = isSysAdmin || isHospitalAdmin;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -154,12 +170,20 @@ export default function ReferralDetailsPage() {
               description={`Clinical transfer record for ${referral.patient?.firstName} ${referral.patient?.lastName}`}
             />
           </div>
-          {(referral.status === "ADMITTED" || referral.status === "COUNTER_REFERRED") && (
-            <Button onClick={handleDownloadPdf} disabled={isExporting} variant="outline" className="gap-2 border-primary/20 hover:bg-primary/5">
-              <FileText className="h-4 w-4" />
-              {isExporting ? "Generating..." : "Download Discharge Summary"}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {(referral.status === "ADMITTED" || referral.status === "COUNTER_REFERRED") && (
+              <Button onClick={handleDownloadPdf} disabled={isExporting} variant="outline" className="gap-2 border-primary/20 hover:bg-primary/5">
+                <FileText className="h-4 w-4" />
+                {isExporting ? "Generating..." : "Download Discharge Summary"}
+              </Button>
+            )}
+            {canDelete && (
+              <Button onClick={handleDelete} disabled={isDeleting} variant="destructive" className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

@@ -160,6 +160,29 @@ export const hospitalApi = apiSliceV1.injectEndpoints({
       }),
       invalidatesTags: [{ type: "Hospital", id: "LIST" }],
     }),
+    deleteWard: builder.mutation<void, string>({
+      query: (wardId) => ({
+        url: `hospitals/wards/${wardId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Ward", { type: "Hospital", id: "LIST" }],
+      async onQueryStarted(wardId, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          hospitalApi.util.updateQueryData("getHospitals", undefined, (draft) => {
+            draft.forEach((h) => {
+              if (h.wards) {
+                h.wards = h.wards.filter((w) => w.id !== wardId);
+              }
+            });
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
+    }),
   }),
 });
 
@@ -174,6 +197,7 @@ export const {
   useUpdateSpecialistMutation,
   useRecalibrateWardMutation,
   useAddHospitalMutation,
+  useDeleteWardMutation,
 } = hospitalApi;
 
 const hospitalSlice = createSlice({

@@ -52,6 +52,13 @@ export const referralApi = apiSliceV1.injectEndpoints({
       }),
       invalidatesTags: (result, error, { id }) => [{ type: "Referral", id }, "Referral"],
     }),
+    deleteReferral: builder.mutation<void, string>({
+      query: (id) => ({
+        url: `referrals/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Referral"],
+    }),
   }),
 });
 
@@ -62,6 +69,7 @@ export const {
   useCreateReferralMutation,
   useUpdateReferralStatusMutation,
   useAddCounterReferralMutation,
+  useDeleteReferralMutation,
 } = referralApi;
 
 const referralSlice = createSlice({
